@@ -1,47 +1,24 @@
 /**
  * @swagger
+ * tags:
+ *   - name: Ingredients
+ *     description: Ингредиенты и поставки
+ */
+
+
+
+/**
+ * @swagger
  * /api/ingredients:
  *   get:
  *     tags:
  *       - Ingredients
  *
- *     summary: Получить список продуктов
- *
- *     parameters:
- *       - in: query
- *         name: factory
- *         schema:
- *           type: integer
- *         description: ID завода
- *
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum:
- *             - profit
- *             - ingredients
- *
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: поиск по названию
- *
+ *     summary: Получить список ингредиентов
  *
  *     responses:
  *       200:
- *         description: Список продуктов
+ *         description: Список ингредиентов
  *
  *         content:
  *           application/json:
@@ -49,8 +26,9 @@
  *               type: array
  *
  *               items:
- *                 $ref: '#/components/schemas/Product'
+ *                 $ref: '#/components/schemas/Ingredient'
  */
+
 
 
 /**
@@ -60,7 +38,7 @@
  *     tags:
  *       - Ingredients
  *
- *     summary: Получить информацию о продукте
+ *     summary: Получить информацию об ингредиенте
  *
  *     parameters:
  *       - in: path
@@ -72,15 +50,15 @@
  *
  *     responses:
  *       200:
- *         description: Информация о продукте
+ *         description: Информация об ингредиенте
  *
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ProductDetails'
+ *               $ref: '#/components/schemas/Ingredient'
  *
  *       404:
- *         description: Продукт не найден
+ *         description: Ингредиент не найден
  */
 
 
@@ -92,7 +70,7 @@
  *     tags:
  *       - Ingredients
  *
- *     summary: Создать новый продукт
+ *     summary: Создать ингредиент
  *
  *     requestBody:
  *       required: true
@@ -106,44 +84,22 @@
  *               name:
  *                 type: string
  *
- *               weight:
- *                 type: number
- *
- *               expiration_days:
- *                 type: integer
- *
  *               price:
  *                 type: number
  *
- *               ingredients:
- *                 type: array
- *
- *                 items:
- *                   type: object
- *
- *                   properties:
- *                     ingredient_id:
- *                       type: integer
- *
- *                     weight_kg:
- *                       type: number
- *
- *               factory:
- *                 type: object
- *
- *                 properties:
- *                   id:
- *                     type: integer
+ *               expiration:
+ *                 type: integer
  *
  *     responses:
  *       201:
- *         description: Продукт успешно создан
+ *         description: Ингредиент создан
  *
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Product'
+ *               $ref: '#/components/schemas/Ingredient'
  */
+
 
 
 /**
@@ -153,7 +109,7 @@
  *     tags:
  *       - Ingredients
  *
- *     summary: Обновить продукт
+ *     summary: Обновить ингредиент
  *
  *     parameters:
  *       - in: path
@@ -175,39 +131,23 @@
  *               name:
  *                 type: string
  *
- *               weight:
- *                 type: number
- *
- *               expiration_days:
- *                 type: integer
- *
  *               price:
  *                 type: number
  *
- *               ingredients:
- *                 type: array
- *
- *                 items:
- *                   type: object
- *
- *                   properties:
- *                     ingredient_id:
- *                       type: integer
- *
- *                     weight_kg:
- *                       type: number
+ *               expiration:
+ *                 type: integer
  *
  *     responses:
  *       200:
- *         description: Продукт успешно обновлён
+ *         description: Ингредиент обновлён
  *
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Product'
+ *               $ref: '#/components/schemas/Ingredient'
  *
  *       404:
- *         description: Продукт не найден
+ *         description: Ингредиент не найден
  */
 
 
@@ -219,7 +159,7 @@
  *     tags:
  *       - Ingredients
  *
- *     summary: Удалить продукт
+ *     summary: Удалить ингредиент
  *
  *     parameters:
  *       - in: path
@@ -231,8 +171,146 @@
  *
  *     responses:
  *       204:
- *         description: Продукт удалён
+ *         description: Ингредиент удалён
  *
  *       404:
- *         description: Продукт не найден
+ *         description: Ингредиент не найден
+ */
+
+
+
+/**
+ * @swagger
+ * /api/ingredients/batches:
+ *   get:
+ *     tags:
+ *       - Ingredients
+ *
+ *     summary: Получить список поставок ингредиентов
+ *
+ *     parameters:
+ *       - in: query
+ *         name: factory_id
+ *
+ *         schema:
+ *           type: integer
+ *
+ *       - in: query
+ *         name: ingredient_id
+ *
+ *         schema:
+ *           type: integer
+ *
+ *     responses:
+ *       200:
+ *         description: Список поставок
+ *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *
+ *               items:
+ *                 $ref: '#/components/schemas/IngredientBatch'
+ */
+
+
+
+/**
+ * @swagger
+ * /api/ingredients/batches/{id}:
+ *   get:
+ *     tags:
+ *       - Ingredients
+ *
+ *     summary: Получить информацию о поставке
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *
+ *         schema:
+ *           type: integer
+ *
+ *     responses:
+ *       200:
+ *         description: Информация о поставке
+ *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/IngredientBatch'
+ *
+ *       404:
+ *         description: Поставка не найдена
+ */
+
+
+
+/**
+ * @swagger
+ * /api/ingredients/batches:
+ *   post:
+ *     tags:
+ *       - Ingredients
+ *
+ *     summary: Зарегистрировать поставку ингредиентов
+ *
+ *     requestBody:
+ *       required: true
+ *
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *
+ *             properties:
+ *               ingredient_id:
+ *                 type: integer
+ *
+ *               factory_id:
+ *                 type: integer
+ *
+ *               amount:
+ *                 type: number
+ *
+ *     responses:
+ *       201:
+ *         description: Поставка зарегистрирована
+ *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/IngredientBatch'
+ *
+ *       404:
+ *         description: Ингредиент или завод не найден
+ */
+
+
+
+/**
+ * @swagger
+ * /api/ingredients/batches/{id}:
+ *   delete:
+ *     tags:
+ *       - Ingredients
+ *
+ *     summary: Удалить поставку
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *
+ *         schema:
+ *           type: integer
+ *
+ *     responses:
+ *       204:
+ *         description: Поставка удалена
+ *
+ *       404:
+ *         description: Поставка не найдена
  */
