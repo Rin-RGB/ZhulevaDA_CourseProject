@@ -1,0 +1,163 @@
+/**
+ * @swagger
+ * tags:
+ *   - name: Batches
+ *     description: Партии выпуска изделий
+ */
+
+
+
+/**
+ * @swagger
+ * /api/batches:
+ *   get:
+ *     tags:
+ *       - Batches
+ *
+ *     summary: Получить список партий
+ *
+ *     parameters:
+ *       - in: query
+ *         name: factory_id
+ *
+ *         schema:
+ *           type: integer
+ *
+ *         description: ID завода
+ *
+ *       - in: query
+ *         name: product_id
+ *
+ *         schema:
+ *           type: integer
+ *
+ *         description: ID изделия
+ * 
+ * 
+ *       - in: query
+ *         name: limit
+ *
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *
+ *       - in: query
+ *         name: offset
+ *
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *
+ *     responses:
+ *       200:
+ *         description: Список партий
+ *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *
+ *               items:
+ *                 $ref: '#/components/schemas/ProductBatch'
+ */
+
+
+
+/**
+ * @swagger
+ * /api/batches/{id}:
+ *   get:
+ *     tags:
+ *       - Batches
+ *
+ *     summary: Получить информацию о партии
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *
+ *         schema:
+ *           type: integer
+ *
+ *     responses:
+ *       200:
+ *         description: Информация о партии
+ *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductBatch'
+ *
+ *       404:
+ *         description: Партия не найдена
+ */
+
+
+
+/**
+ * @swagger
+ * /api/batches:
+ *   post:
+ *     tags:
+ *       - Batches
+ *
+ *     summary: Добавить партию
+ *
+ *     requestBody:
+ *       required: true
+ *
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *
+ *             properties:
+ *               product_id:
+ *                 type: integer
+ *
+ *               factory_id:
+ *                 type: integer
+ *
+ *               amount:
+ *                 type: integer
+ *
+ *     responses:
+ *       201:
+ *         description: Партия создана
+ *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductBatch'
+ *
+ *       404:
+ *         description: Продукт или завод не найден
+ */
+
+
+
+/**
+ * @swagger
+ * /api/batches/{id}:
+ *   delete:
+ *     tags:
+ *       - Batches
+ *
+ *     summary: Удалить партию
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *
+ *         schema:
+ *           type: integer
+ *
+ *     responses:
+ *       204:
+ *         description: Партия удалена
+ *
+ *       404:
+ *         description: Партия не найдена
+ */

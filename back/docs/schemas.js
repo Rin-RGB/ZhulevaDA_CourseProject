@@ -63,16 +63,7 @@
  *           type: integer
  *           description: срок годности (в днях)
  *
- *
- *     ProductDetails:
- *       allOf:
- *         - $ref: '#/components/schemas/Product'
- *         - type: object
- *           properties:
- *             factories:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Factory'
+
  *
  *     Worker:
  *       type: object
@@ -115,4 +106,72 @@
  *               role:
  *                 type: string
  *                 description: Роль пользователя на конкретном заводе
+ *
+ *
+ *     ProductBatch:
+ *       type: object
+ *
+ *       properties:
+ *         id:
+ *           type: integer
+ *
+ *         product_id:
+ *           type: integer
+ *
+ *         product_name:
+ *           type: string
+ *
+ *         factory_id:
+ *           type: integer
+ *
+ *         factory_name:
+ *           type: string
+ *
+ *         amount:
+ *           type: integer
+ *
+ *         production_date:
+ *           type: string
+ *           format: date
+ *
+ *         expiration_date:
+ *           type: string
+ *           format: date
+ *
+ *         is_fresh:
+ *           type: boolean
+ *
+ *
+ *     IngredientBatch:
+ *       type: object
+ *
+ *       properties:
+ *         id:
+ *           type: integer
+ *
+ *         ingredient_id:
+ *           type: integer
+ *
+ *         ingredient_name:
+ *           type: string
+ *
+ *         factory_id:
+ *           type: integer
+ *
+ *         factory_name:
+ *           type: string
+ *
+ *         amount:
+ *           type: number
+ *
+ *         delivery_date:
+ *           type: string
+ *           format: date
+ *
+ *         expiry_date:
+ *           type: string
+ *           format: date
+ *
+ *         is_expired:
+ *           type: boolean
  */

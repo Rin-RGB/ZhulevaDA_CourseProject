@@ -27,6 +27,9 @@ app.use('/api/workers', workersRouter);
 const ingredientsRouter = require('./routes/ingredients');
 app.use('/api/ingredients', ingredientsRouter);
 
+const batchesRouter = require('./routes/batches');
+app.use('/api/batches', batchesRouter);
+
 async function initAndSeed() {
     await initDatabase();
     

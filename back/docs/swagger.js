@@ -57,6 +57,10 @@ const options = {
                 description: 'Работа с ингредиентами'
             },
             {
+                name: 'Batches',
+                description: 'Работа с поставками готовых изделий'
+            },
+            {
                 name: 'Auth',
                 description: 'Авторизация'
             }

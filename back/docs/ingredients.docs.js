@@ -201,6 +201,18 @@
  *         schema:
  *           type: integer
  *
+ *       - in: query
+ *         name: limit
+ *
+ *         schema:
+ *           type: integer
+
+ *       - in: query
+ *         name: offset
+ *
+ *         schema:
+ *           type: integer
+ * 
  *     responses:
  *       200:
  *         description: Список поставок

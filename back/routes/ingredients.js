@@ -13,7 +13,8 @@ async function elementOr404(table, id, res) {
 
     const allowedTables = [
         'ingredients',
-        'batch_ingredient'
+        'batch_ingredient',
+        `factory`
     ];
 
     if (!allowedTables.includes(table)) {
@@ -47,7 +48,9 @@ router.get('/batches', async (req, res) => {
 
         const {
             factory_id,
-            ingredient_id
+            ingredient_id,
+            limit = 10,
+            offset = 0
         } = req.query;
 
         const params = [];
@@ -66,8 +69,8 @@ router.get('/batches', async (req, res) => {
                 bi.delivery_date,
                 bi.expiry_date,
 
-                bi.expiry_date < DATE('now')
-                    AS is_expired
+                bi.expiry_date > DATE('now')
+                    AS is_fresh
 
             FROM batch_ingredient bi
 
@@ -81,6 +84,13 @@ router.get('/batches', async (req, res) => {
         `;
 
         if (factory_id) {
+            const exists = await elementOr404(
+                'factory',
+                factory_id,
+                res
+            );
+
+            if (!exists) return;
 
             sql += `
                 AND bi.factory_id = ?
@@ -90,6 +100,13 @@ router.get('/batches', async (req, res) => {
         }
 
         if (ingredient_id) {
+            const exists = await elementOr404(
+                'ingredients',
+                ingredient_id,
+                res
+            );
+
+            if (!exists) return;
 
             sql += `
                 AND bi.ingredient_id = ?
@@ -97,6 +114,16 @@ router.get('/batches', async (req, res) => {
 
             params.push(ingredient_id);
         }
+        sql += `
+            ORDER BY bi.delivery_date DESC
+            LIMIT ?
+            OFFSET ?
+        `;
+
+        params.push(
+            Number(limit),
+            Number(offset)
+        );
 
         const batches = await query(sql, params);
 
@@ -142,8 +169,8 @@ router.get('/batches/:id', async (req, res) => {
                 bi.delivery_date,
                 bi.expiry_date,
 
-                bi.expiry_date < DATE('now')
-                    AS is_expired
+                bi.expiry_date > DATE('now')
+                    AS is_fresh
 
             FROM batch_ingredient bi
 
@@ -249,8 +276,8 @@ router.post('/batches', async (req, res) => {
                 bi.delivery_date,
                 bi.expiry_date,
 
-                bi.expiry_date < DATE('now')
-                    AS is_expired
+                bi.expiry_date > DATE('now')
+                    AS is_fresh
 
             FROM batch_ingredient bi
 
