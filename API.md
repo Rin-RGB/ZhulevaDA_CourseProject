@@ -752,6 +752,8 @@
 |----------|-----|----------|
 | `ingredient_id` | integer | ID ингредиента |
 | `factory_id` | integer | ID завода |
+| `limit` | integer | Количество записей (по умолч. 10) |
+| `offset` | integer | Смещение (по умолч. 0) |
 
 **Ответ:** `200 OK`
 ```json
@@ -763,7 +765,7 @@
     "amount": 100,
     "delivery_date": "2024-05-01",
     "expiry_date": "2024-05-15",
-    "is_expired": false
+    "is_fresh": true
   }
 ]
 ```
@@ -814,8 +816,12 @@
 **Ответ:** `201 Created`
 ```json
 {
-  "id": 5,
-  "message": "Поставка зарегистрирована"
+  "id": 1,
+  "ingredient_name": "Дрожжи",
+  "factory_name": "Завод №3",
+  "amount": 100,
+  "delivery_date": "2024-05-01",
+  "expiry_date": "2024-05-15",
 }
 ```
 
@@ -923,6 +929,7 @@
 | Параметр | Тип | Описание |
 |----------|-----|----------|
 | `factory` | integer | ID завода |
+| `product` | integer | ID изделия |
 | `limit` | integer | Количество записей (по умолч. 10) |
 | `offset` | integer | Смещение (по умолч. 0) |
 
