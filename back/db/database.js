@@ -68,10 +68,6 @@ function queryOne(sql, params = []) {
 }
 
 
-// =========================
-// INIT DATABASE
-// =========================
-
 async function initDatabase() {
 
     try {
@@ -86,15 +82,15 @@ async function initDatabase() {
                 name TEXT NOT NULL,
                 last_name TEXT NOT NULL,
                 hashed_password TEXT,
-                authorized BOOLEAN DEFAULT 0
+                is_authorized BOOLEAN DEFAULT 0
             )
         `);
 
-        // factory
+        // factories
         await runQuery(`
-            CREATE TABLE IF NOT EXISTS factory (
+            CREATE TABLE IF NOT EXISTS factories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                name TEXT UNIQUE NOT NULL,
                 address TEXT
             )
         `);
@@ -113,7 +109,7 @@ async function initDatabase() {
                     ON DELETE CASCADE,
 
                 FOREIGN KEY (factory_id)
-                    REFERENCES factory(id)
+                    REFERENCES factories(id)
                     ON DELETE CASCADE
             )
         `);
@@ -122,7 +118,7 @@ async function initDatabase() {
         await runQuery(`
             CREATE TABLE IF NOT EXISTS ingredients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                name TEXT UNIQUE NOT NULL,
                 price REAL NOT NULL,
                 expiration_days INTEGER NOT NULL
             )
@@ -132,7 +128,7 @@ async function initDatabase() {
         await runQuery(`
             CREATE TABLE IF NOT EXISTS products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                name TEXT UNIQUE NOT NULL,
                 weight REAL NOT NULL,
                 expiration_days INTEGER NOT NULL,
                 price REAL NOT NULL
@@ -148,7 +144,7 @@ async function initDatabase() {
                 PRIMARY KEY (factory_id, product_id),
 
                 FOREIGN KEY (factory_id)
-                    REFERENCES factory(id)
+                    REFERENCES factories(id)
                     ON DELETE CASCADE,
 
                 FOREIGN KEY (product_id)
@@ -157,12 +153,12 @@ async function initDatabase() {
             )
         `);
 
-        // recipe
+        // recipes
         await runQuery(`
-            CREATE TABLE IF NOT EXISTS recipe (
+            CREATE TABLE IF NOT EXISTS recipes (
                 product_id INTEGER NOT NULL,
                 ingredient_id INTEGER NOT NULL,
-                weight REAL NOT NULL,
+                quantity_kg REAL NOT NULL,
 
                 PRIMARY KEY (product_id, ingredient_id),
 
@@ -181,7 +177,7 @@ async function initDatabase() {
             CREATE TABLE IF NOT EXISTS batch_ingredient (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ingredient_id INTEGER NOT NULL,
-                amount REAL NOT NULL,
+                delivery_kg REAL NOT NULL,
                 delivery_date DATE NOT NULL,
                 expiry_date DATE NOT NULL,
                 factory_id INTEGER NOT NULL,
@@ -191,7 +187,7 @@ async function initDatabase() {
                     ON DELETE CASCADE,
 
                 FOREIGN KEY (factory_id)
-                    REFERENCES factory(id)
+                    REFERENCES factories(id)
                     ON DELETE CASCADE
             )
         `);
@@ -201,7 +197,7 @@ async function initDatabase() {
             CREATE TABLE IF NOT EXISTS batch_product (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 product_id INTEGER NOT NULL,
-                amount REAL NOT NULL,
+                amount INTEGER NOT NULL,
                 production_date DATE NOT NULL,
                 expiry_date DATE NOT NULL,
                 factory_id INTEGER NOT NULL,
@@ -211,7 +207,7 @@ async function initDatabase() {
                     ON DELETE CASCADE,
 
                 FOREIGN KEY (factory_id)
-                    REFERENCES factory(id)
+                    REFERENCES factories(id)
                     ON DELETE CASCADE
             )
         `);
