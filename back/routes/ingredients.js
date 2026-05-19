@@ -343,9 +343,7 @@ router.get('/', async (req, res) => {
             SELECT
                 i.id,
                 i.name,
-
-                i.price AS current_price,
-
+                i.price,
                 i.expiration_days
 
             FROM ingredients i
@@ -383,9 +381,7 @@ router.get('/:id', async (req, res) => {
             SELECT
                 i.id,
                 i.name,
-
-                i.price AS current_price,
-
+                i.price,
                 i.expiration_days
 
             FROM ingredients i
@@ -435,7 +431,7 @@ router.post('/', async (req, res) => {
             SELECT
                 id,
                 name,
-                price AS current_price,
+                price,
                 expiration_days
 
             FROM ingredients
@@ -497,9 +493,7 @@ router.put('/:id', async (req, res) => {
             SELECT
                 id,
                 name,
-
-                price AS current_price,
-
+                price,
                 expiration_days
 
             FROM ingredients

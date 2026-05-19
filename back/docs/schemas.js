@@ -59,7 +59,7 @@
  *         price:
  *           type: number
  * 
- *         expiration:
+ *         expiration_days:
  *           type: integer
  *           description: срок годности (в днях)
  *

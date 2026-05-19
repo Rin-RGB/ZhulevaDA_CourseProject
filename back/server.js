@@ -3,6 +3,7 @@ const {  initDatabase, runQuery, query, queryOne } = require('./db/database');
 const { seedDatabase } = require('./db/seed');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
+const cors = require("cors");
 
 const app = express();
 const PORT = 3000;
@@ -14,26 +15,32 @@ app.use(
     swaggerUi.setup(swaggerSpec)
 );
 
+app.use(cors({
+    origin: "http://localhost:8000",
+    credentials: true,
+}));
+
+
 // Подключаем маршруты
 const productsRouter = require('./routes/products');
 app.use('/api/products', productsRouter);
 
-const factoriesRouter = require('./routes/factories');
-app.use('/api/factories', factoriesRouter);
+// const factoriesRouter = require('./routes/factories');
+// app.use('/api/factories', factoriesRouter);
 
-const workersRouter = require('./routes/workers');
-app.use('/api/workers', workersRouter);
+// const workersRouter = require('./routes/workers');
+// app.use('/api/workers', workersRouter);
 
-const ingredientsRouter = require('./routes/ingredients');
-app.use('/api/ingredients', ingredientsRouter);
+// const ingredientsRouter = require('./routes/ingredients');
+// app.use('/api/ingredients', ingredientsRouter);
 
-const batchesRouter = require('./routes/batches');
-app.use('/api/batches', batchesRouter);
+// const batchesRouter = require('./routes/batches');
+// app.use('/api/batches', batchesRouter);
 
 async function initAndSeed() {
     await initDatabase();
     
-    const factoryCount = await queryOne(`SELECT COUNT(*) as count FROM factory`);
+    const factoryCount = await queryOne(`SELECT COUNT(*) as count FROM factories`);
     
     if (factoryCount.count === 0) {
         console.log('База пуста, заполняем...');
