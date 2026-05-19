@@ -96,7 +96,7 @@
 **Ответ:** `200 OK`
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs..."
+  "access_token": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
 
@@ -177,7 +177,7 @@
 
 **Ответ:** `200 OK`
 ```json
-[
+{"products": [
   {
     "id": 1,
     "name": "Батон нарезной",
@@ -187,7 +187,8 @@
     "profit": 50.60,
     "ingredients_count": 4,
   }
-]
+],
+"summary": 55000}
 ```
 
 **Права доступа:** все авторизованные
@@ -214,8 +215,8 @@
     "profit": 50.60,
     "ingredients_count": 4,
     "factories": [
-        { "id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1", "total_produced": 20 },
-        { "id": 2, "name": "Завод №2", "address": "ул. Пекарная, 5", "total_produced": 3 }
+        { "factory_id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1",  "total_produced": 20 },
+        { "factory_id": 2, "name": "Завод №2", "address": "ул. Пирогова, 1",  "total_produced": 50 }
     ]
 }
 ```
@@ -234,10 +235,13 @@
     "expiration_days": 3,
     "price": 120.00,
     "ingredients": [
-        { "ingredient_id": 1, "weight_kg": 0.020 },
-        { "ingredient_id": 2, "weight_kg": 0.480 }
+      { "ingredient_id": 1, "quantity_kg": 0.020 },
+      { "ingredient_id": 2, "quantity_kg": 0.480 }
     ],
-    "factory": { "id": 1 }
+    "factories": [
+      { "factory_id": 1 },
+      { "factory_id": 2 }
+    ]
 }
 ```
 
@@ -251,7 +255,10 @@
     "price": 120.00,
     "profit": 50.60,
     "ingredients_count": 2,
-    "factory": { "id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1",  "total_produced": 20 }
+    "factories": [
+        { "factory_id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1" },
+        { "factory_id": 2, "name": "Завод №2", "address": "ул. Пирогова, 1" }
+    ]
 }
 ```
 **Права доступа:** Руководитель завода (руководитель комбината может создать ингредиент с factory: none для хранения информации до распределения на заводы)
@@ -274,8 +281,8 @@
     "expiration_days": 3,
     "price": 120.00,
     "ingredients": [
-        { "ingredient_id": 1, "weight_kg": 0.020 },
-        { "ingredient_id": 2, "weight_kg": 0.480 }
+        { "ingredient_id": 1, "quantity_kg": 0.020 },
+        { "ingredient_id": 2, "quantity_kg": 0.480 }
     ],
 }
 ```
@@ -307,7 +314,7 @@
 **Тело запроса:**
 ```json
 {
-    "factories": [{ "id": 1 }, { "id": 2 }]
+    "factories": [{ "factory_id": 1 }, { "factory_id": 2 }]
 }
 ```
 
@@ -317,8 +324,8 @@
     "id": 1,
     "name": "Батон нарезной",
     "factories": [
-        { "id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1", "total_produced": 20 },
-        { "id": 2, "name": "Завод №2", "address": "ул. Пекарная, 5", "total_produced": 0 }
+        { "factory_id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1", "total_produced": 20 },
+        { "factory_id": 2, "name": "Завод №2", "address": "ул. Пекарная, 5", "total_produced": 0 }
     ]
 }
 ```
@@ -390,14 +397,14 @@
         "name": "Завод №1",
         "address": "ул. Хлебная, 1",
         "total_value": 8000.00,
-        "count": 15 
+        "volume": 15 
     },
     { 
         "id": 2, 
         "name": "Завод №2", 
         "address": "ул. Пекарная, 5", 
         "total_value": 5000.00, 
-        "count": 8  
+        "volume": 8  
     }
 ]
 ```
@@ -421,13 +428,13 @@
   "name": "Завод №1",
   "address": "ул. Хлебная, 1",
   "total_value": 8000.00,
-  "count": 15,
+  "volume": 15,
   "managers":
   [
     {
-      "id": 1,
+      "manager_id": 1,
       "name": "Анна",
-      "last_name": "Руководитель",
+      "last_name": "Королёва",
       "role": "CEO"
     }
   ]
@@ -583,7 +590,7 @@
     "role": "worker",
     "authorized": true,
     "factories": [
-        { "factory_id": 1, "role": "worker" }
+        { "factory_id": 1, "name": "Хлебозавод №1", "role": "worker" }
     ]
   }
 ]
@@ -612,8 +619,8 @@
   "role": "worker",
   "authorized": true,
   "factories": [
-    { "factory_id": 1, "role": "worker" },
-    { "factory_id": 2, "role": "worker" }
+    { "factory_id": 1, "name": "Хлебозавод №1", "role": "worker" },
+    { "factory_id": 2, "name": "Хлебозавод №2", "role": "worker" }
   ]
 }
 ```
@@ -632,7 +639,6 @@
   "email": "new_worker@bakery.com",
   "name": "Пётр",
   "last_name": "Сидоров",
-  "role": "worker",
   "factories": [
     { "factory_id": 1, "role": "worker" }
   ]
@@ -664,7 +670,6 @@
 {
   "name": "Пётр",
   "last_name": "Иванов",
-  "role": "manager",
   "factories": [
     { "factory_id": 1, "role": "manager" },
     { "factory_id": 2, "role": "worker" }
@@ -711,7 +716,7 @@
   {
     "id": 1,
     "name": "Мука",
-    "current_price": 35.00,
+    "price": 35.00,
     "expiration_days": 365
   }
 ]
@@ -733,7 +738,7 @@
 {
   "id": 1,
   "name": "Мука",
-  "current_price": 35.00,
+  "price": 35.00,
   "expiration_days": 365
 
 }
@@ -760,9 +765,11 @@
 [
   {
     "id": 1,
+    "ingredient_id": 12,
     "ingredient_name": "Дрожжи",
+    "factory_id": 3,
     "factory_name": "Завод №3",
-    "amount": 100,
+    "delivery_kg": 100,
     "delivery_date": "2024-05-01",
     "expiry_date": "2024-05-15",
     "is_fresh": true
@@ -775,20 +782,22 @@
 
 ### 6.4 Информация о конкретной поставке
 
-`GET /ingredients/batches/{batch_id}`
+`GET /ingredients/batches/{id}`
 
 **Параметры пути:**
 | Параметр | Тип | Описание |
 |----------|-----|----------|
-| `batch_id` | integer | ID партии поставки |
+| `id` | integer | ID партии поставки |
 
 **Ответ:** `200 OK`
 ```json
 {
   "id": 1,
+  "ingredient_id": 12,
   "ingredient_name": "Дрожжи",
+  "factory_id": 3,
   "factory_name": "Завод №3",
-  "amount": 100,
+  "delivery_kg": 100,
   "delivery_date": "2024-05-01",
   "expiry_date": "2024-05-15",
   "is_expired": false
@@ -808,8 +817,7 @@
 {
   "factory_id": 1,
   "ingredient_id": 2,
-  "amount": 100,
-  "delivery_date": "2024-12-10"
+  "delivery_kg": 100,
 }
 ```
 
@@ -817,9 +825,11 @@
 ```json
 {
   "id": 1,
+  "ingredient_id": 12,
   "ingredient_name": "Дрожжи",
+  "factory_id": 3,
   "factory_name": "Завод №3",
-  "amount": 100,
+  "delivery_kg": 100,
   "delivery_date": "2024-05-01",
   "expiry_date": "2024-05-15",
 }
@@ -831,7 +841,7 @@
 
 ### 6.6 Удалить поставку
 
-`DELETE /ingredients/batches/{batch_id}`
+`DELETE /ingredients/batches/{id}`
 
 **Параметры пути:**
 | Параметр | Тип | Описание |
@@ -852,7 +862,7 @@
 ```json
 {
   "name": "Мука пшеничная",
-  "current_price": 35.00,
+  "price": 35.00,
   "expiration_days": 365
 
 }
@@ -883,7 +893,7 @@
 ```json
 {
   "name": "Мука пшеничная",
-  "current_price": 35.00,
+  "price": 35.00,
   "expiration_days": 365
 
 }
@@ -894,7 +904,7 @@
 {
   "id": 10,
   "name": "Мука пшеничная",
-  "current_price": 35.00,
+  "price": 35.00,
   "expiration_days": 365
 }
 ```
@@ -942,7 +952,8 @@
     "id": 10,
     "product_id": 1,
     "product_name": "Батон нарезной",
-    "factory_id": 1, 
+    "factory_id": 1,
+    "factory_name": "Хлебозавод №2", 
     "amount": 500,
     "production_date": "2024-05-20",
     "expiration_date": "2024-05-30",
@@ -970,7 +981,8 @@
     "id": 10,
     "product_id": 1,
     "product_name": "Батон нарезной",
-    "factory_id": 1, 
+    "factory_id": 1,
+    "factory_name": "Хлебозавод №2", 
     "amount": 500,
     "production_date": "2024-05-20",
     "expiration_date": "2024-05-30",
@@ -991,7 +1003,6 @@
     "product_id": 1,
     "factory_id": 1, 
     "amount": 500,
-    "production_date": "2024-05-20"
 }
 ```
 
@@ -1002,6 +1013,7 @@
     "product_id": 1,
     "product_name": "Батон нарезной",
     "factory_id": 1, 
+    "factory_name": "Хлебозавод №2",
     "amount": 500,
     "production_date": "2024-05-20",
     "expiration_date": "2024-05-30",
