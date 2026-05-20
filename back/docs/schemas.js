@@ -161,7 +161,7 @@
  *         factory_name:
  *           type: string
  *
- *         amount:
+ *         delivery_kg:
  *           type: number
  *
  *         delivery_date:

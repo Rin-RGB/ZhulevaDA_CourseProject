@@ -31,8 +31,8 @@ app.use('/api/products', productsRouter);
 // const workersRouter = require('./routes/workers');
 // app.use('/api/workers', workersRouter);
 
-// const ingredientsRouter = require('./routes/ingredients');
-// app.use('/api/ingredients', ingredientsRouter);
+const ingredientsRouter = require('./routes/ingredients');
+app.use('/api/ingredients', ingredientsRouter);
 
 // const batchesRouter = require('./routes/batches');
 // app.use('/api/batches', batchesRouter);

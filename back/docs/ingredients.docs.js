@@ -2,7 +2,7 @@
  * @swagger
  * tags:
  *   - name: Ingredients
- *     description: Ингредиенты и поставки
+ *     description: Ингредиенты и поставки сырья
  */
 
 
@@ -44,6 +44,7 @@
  *       - in: path
  *         name: id
  *         required: true
+ *         description: ID ингредиента
  *
  *         schema:
  *           type: integer
@@ -56,6 +57,9 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Ingredient'
+ *
+ *       400:
+ *         description: Некорректный id
  *
  *       404:
  *         description: Ингредиент не найден
@@ -80,15 +84,23 @@
  *           schema:
  *             type: object
  *
+ *             required:
+ *               - name
+ *               - price
+ *               - expiration_days
+ *
  *             properties:
  *               name:
  *                 type: string
+ *                 description: Название ингредиента
  *
  *               price:
  *                 type: number
+ *                 description: Цена за единицу
  *
- *               expiration:
+ *               expiration_days:
  *                 type: integer
+ *                 description: Срок хранения в днях
  *
  *     responses:
  *       201:
@@ -98,6 +110,9 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Ingredient'
+ *
+ *       400:
+ *         description: Некорректные данные или ингредиент уже существует
  */
 
 
@@ -115,6 +130,7 @@
  *       - in: path
  *         name: id
  *         required: true
+ *         description: ID ингредиента
  *
  *         schema:
  *           type: integer
@@ -127,15 +143,23 @@
  *           schema:
  *             type: object
  *
+ *             required:
+ *               - name
+ *               - price
+ *               - expiration_days
+ *
  *             properties:
  *               name:
  *                 type: string
+ *                 description: Название ингредиента
  *
  *               price:
  *                 type: number
+ *                 description: Цена за единицу
  *
- *               expiration:
+ *               expiration_days:
  *                 type: integer
+ *                 description: Срок хранения в днях
  *
  *     responses:
  *       200:
@@ -145,6 +169,9 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Ingredient'
+ *
+ *       400:
+ *         description: Некорректные данные
  *
  *       404:
  *         description: Ингредиент не найден
@@ -165,6 +192,7 @@
  *       - in: path
  *         name: id
  *         required: true
+ *         description: ID ингредиента
  *
  *         schema:
  *           type: integer
@@ -172,6 +200,9 @@
  *     responses:
  *       204:
  *         description: Ингредиент удалён
+ *
+ *       400:
+ *         description: Некорректный id
  *
  *       404:
  *         description: Ингредиент не найден
@@ -191,28 +222,36 @@
  *     parameters:
  *       - in: query
  *         name: factory_id
+ *         required: false
+ *         description: ID завода
  *
  *         schema:
  *           type: integer
  *
  *       - in: query
  *         name: ingredient_id
+ *         required: false
+ *         description: ID ингредиента
  *
  *         schema:
  *           type: integer
  *
  *       - in: query
  *         name: limit
+ *         required: false
+ *         description: Количество записей
  *
  *         schema:
  *           type: integer
-
+ *
  *       - in: query
  *         name: offset
+ *         required: false
+ *         description: Смещение
  *
  *         schema:
  *           type: integer
- * 
+ *
  *     responses:
  *       200:
  *         description: Список поставок
@@ -224,6 +263,9 @@
  *
  *               items:
  *                 $ref: '#/components/schemas/IngredientBatch'
+ *
+ *       400:
+ *         description: Некорректные query параметры
  */
 
 
@@ -241,6 +283,7 @@
  *       - in: path
  *         name: id
  *         required: true
+ *         description: ID поставки
  *
  *         schema:
  *           type: integer
@@ -253,6 +296,9 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/IngredientBatch'
+ *
+ *       400:
+ *         description: Некорректный id
  *
  *       404:
  *         description: Поставка не найдена
@@ -277,15 +323,23 @@
  *           schema:
  *             type: object
  *
+ *             required:
+ *               - ingredient_id
+ *               - factory_id
+ *               - delivery_kg
+ *
  *             properties:
  *               ingredient_id:
  *                 type: integer
+ *                 description: ID ингредиента
  *
  *               factory_id:
  *                 type: integer
+ *                 description: ID завода
  *
- *               amount:
+ *               delivery_kg:
  *                 type: number
+ *                 description: Количество поставленного сырья
  *
  *     responses:
  *       201:
@@ -295,6 +349,9 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/IngredientBatch'
+ *
+ *       400:
+ *         description: Некорректные данные
  *
  *       404:
  *         description: Ингредиент или завод не найден
@@ -315,6 +372,7 @@
  *       - in: path
  *         name: id
  *         required: true
+ *         description: ID поставки
  *
  *         schema:
  *           type: integer
@@ -322,6 +380,9 @@
  *     responses:
  *       204:
  *         description: Поставка удалена
+ *
+ *       400:
+ *         description: Некорректный id
  *
  *       404:
  *         description: Поставка не найдена

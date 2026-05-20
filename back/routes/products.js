@@ -9,6 +9,18 @@ router.get('/:id/ingredients', async (req, res) => {
 
         const productId = req.params.id;
 
+        if (
+            productId !== undefined &&
+            (
+                isNaN(Number(productId)) ||
+                Number(productId) < 1
+            )
+        ) {
+            return res.status(400).json({
+                error: 'Некорректный id'
+            });
+        }
+
         const product = await queryOne(`
                 SELECT id FROM products
                 WHERE id = ?
@@ -48,6 +60,18 @@ router.put('/:id/factories', async (req, res) => {
     try {
 
         const productId = req.params.id;
+
+        if (
+            productId !== undefined &&
+            (
+                isNaN(Number(productId)) ||
+                Number(productId) < 1
+            )
+        ) {
+            return res.status(400).json({
+                error: 'Некорректный id'
+            });
+        }
 
         let {
             factories
@@ -213,9 +237,9 @@ router.get('/', async (req, res) => {
 
         if (search) {
             whereSql += `
-                AND p.name LIKE ?
+                AND LOWER(TRIM(p.name)) LIKE ?
             `;
-            params.push(`%${search}%`)
+            params.push(`%${search.toLowerCase().trim()}%`)
         }
 
         if (factory) {
@@ -365,6 +389,18 @@ router.get('/:id', async (req, res) => {
 
         const productId = req.params.id;
 
+        if (
+            productId !== undefined &&
+            (
+                isNaN(Number(productId)) ||
+                Number(productId) < 1
+            )
+        ) {
+            return res.status(400).json({
+                error: 'Некорректный id'
+            });
+        }
+
         // продукт
         const product = await queryOne(`
             SELECT
@@ -477,7 +513,7 @@ router.post('/', async (req, res) => {
                 error: 'Некорректное имя'
             });
         }
-        name = name.toLowerCase().trim();
+        name = name.trim();
         const productExists = await queryOne(`
             SELECT id FROM products
             WHERE name = ?
@@ -729,6 +765,19 @@ router.delete('/:id', async (req, res) => {
     try {
 
         const productId = req.params.id;
+
+        if (
+            productId !== undefined &&
+            (
+                isNaN(Number(productId)) ||
+                Number(productId) < 1
+            )
+        ) {
+            return res.status(400).json({
+                error: 'Некорректный id'
+            });
+        }
+
         const productExists = await queryOne(`
             SELECT id FROM products
             WHERE id = ?
@@ -769,6 +818,17 @@ router.put('/:id', async (req, res) => {
 
         let { name } = req.body;
 
+        if (
+            productId !== undefined &&
+            (
+                isNaN(Number(productId)) ||
+                Number(productId) < 1
+            )
+        ) {
+            return res.status(400).json({
+                error: 'Некорректный id'
+            });
+        }
 
         // проверяем существование продукта
         const productToUpdate = await queryOne(`
@@ -794,7 +854,7 @@ router.put('/:id', async (req, res) => {
                 error: 'Некорректное имя'
             });
         }
-        name = name.toLowerCase().trim();
+        name = name.trim();
 
 
         const productExists = await queryOne(`

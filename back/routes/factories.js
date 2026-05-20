@@ -8,10 +8,75 @@ const {
 } = require('../db/database');
 
 
-// =======================================
-// GET /api/factories
-// список заводов
-// =======================================
+
+function checkNumber(num) {
+    if (
+        num === undefined ||
+        num === null ||
+        (typeof num === 'string' && num.trim() === '')
+    ) {
+        return null;
+    }
+
+    const value = Number(num);
+
+    if (Number.isNaN(value)) {
+        return null;
+    }
+
+    return value;
+}
+
+function checkPositiveNumber(num) {
+    num = checkNumber(num);
+    if (num !== null && num > 0) {
+        return num;
+    }
+    return null;
+}
+
+function checkNonNegativeNumber(num) {
+    const checkedNum = checkNumber(num);
+
+    if (checkedNum !== null && checkedNum >= 0) {
+        return checkedNum;
+    }
+
+    return null;
+}
+
+function checkId(id) {
+    const checkedId = checkNumber(id);
+    if (
+        checkedId == null ||
+        !Number.isInteger(checkedId) ||
+        checkedId < 1
+    ) {
+        return null;
+    }
+    return checkedId;
+}
+
+async function elementExists(table, id) {
+    const allowedTables = [
+        'products',
+        'batch_product',
+        'factories'
+    ];
+
+    if (!allowedTables.includes(table)) {
+        const err = new Error('Неверное название таблицы');
+        err.status = 400;
+        throw err;
+    }
+
+    return await queryOne(`
+        SELECT id, name
+        FROM ${table}
+        WHERE id = ?
+    `, [id]);
+}
+
 
 router.get('/', async (req, res) => {
 

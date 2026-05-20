@@ -7,37 +7,72 @@ const {
     queryOne
 } = require('../db/database');
 
-
-
-async function elementOr404(table, id, res) {
-
-    const allowedTables = [
-        'ingredients',
-        'batch_ingredient',
-        `factory`
-    ];
-
-    if (!allowedTables.includes(table)) {
-
+function checkNumber(num) {
+    if (
+        num === undefined ||
+        num === null ||
+        (typeof num === 'string' && num.trim() === '')
+    ) {
         return null;
     }
 
-    const element = await queryOne(`
+    const value = Number(num);
+
+    if (Number.isNaN(value)) {
+        return null;
+    }
+
+    return value;
+}
+
+function checkPositiveNumber(num) {
+    num = checkNumber(num);
+    if (num !== null && num > 0) {
+        return num;
+    }
+    return null;
+}
+
+function checkNonNegativeNumber(num) {
+    const checkedNum = checkNumber(num);
+
+    if (checkedNum !== null && checkedNum >= 0) {
+        return checkedNum;
+    }
+
+    return null;
+}
+
+function checkId(id) {
+    const checkedId = checkNumber(id);
+    if (
+        checkedId == null ||
+        !Number.isInteger(checkedId) ||
+        checkedId < 1
+    ) {
+        return null;
+    }
+    return checkedId;
+}
+
+async function elementExists(table, id) {
+    const allowedTables = [
+        'ingredients',
+        'batch_ingredient',
+        'factories'
+    ];
+
+    if (!allowedTables.includes(table)) {
+        const err = new Error('Неверное название таблицы');
+        err.status = 400;
+        throw err;
+    }
+
+    return await queryOne(`
         SELECT id
         FROM ${table}
         WHERE id = ?
     `, [id]);
-
-    if (!element) {
-
-        res.status(404).json({
-            error: 'Элемент не найден'
-        });
-
-        return null;
-    }
-
-    return element;
 }
 
 
@@ -53,6 +88,19 @@ router.get('/batches', async (req, res) => {
             offset = 0
         } = req.query;
 
+        const checkedLimit =
+            checkPositiveNumber(limit);
+
+        const checkedOffset =
+            checkNonNegativeNumber(offset);
+
+        if (checkedLimit === null) {
+            return res.status(400).json({ error: "limit должен быть положительным числом" });
+        }
+        if (checkedOffset === null) {
+            return res.status(400).json({ error: "offset должен быть неотрицательным числом" });
+        }
+
         const params = [];
 
         let sql = `
@@ -65,7 +113,7 @@ router.get('/batches', async (req, res) => {
                 bi.factory_id,
                 f.name AS factory_name,
 
-                bi.amount,
+                bi.delivery_kg,
                 bi.delivery_date,
                 bi.expiry_date,
 
@@ -77,20 +125,27 @@ router.get('/batches', async (req, res) => {
             LEFT JOIN ingredients i
                 ON i.id = bi.ingredient_id
 
-            LEFT JOIN factory f
+            LEFT JOIN factories f
                 ON f.id = bi.factory_id
 
             WHERE 1 = 1
         `;
 
-        if (factory_id) {
-            const exists = await elementOr404(
-                'factory',
-                factory_id,
-                res
+        if (factory_id !== undefined) {
+            if (checkId(factory_id) === null) {
+                return res.status(400).json({ error: "Неверный id завода" })
+            }
+
+            const factoryExists = await elementExists(
+                'factories',
+                factory_id
             );
 
-            if (!exists) return;
+            if (!factoryExists) {
+                return res.status(404).json({
+                    error: 'Завод не найден'
+                });
+            }
 
             sql += `
                 AND bi.factory_id = ?
@@ -99,14 +154,21 @@ router.get('/batches', async (req, res) => {
             params.push(factory_id);
         }
 
-        if (ingredient_id) {
-            const exists = await elementOr404(
+        if (ingredient_id !== undefined) {
+            if (checkId(ingredient_id) === null) {
+                return res.status(400).json({ error: "Неверный id ингредиента" })
+            }
+
+            const ingredientExists = await elementExists(
                 'ingredients',
-                ingredient_id,
-                res
+                ingredient_id
             );
 
-            if (!exists) return;
+            if (!ingredientExists) {
+                return res.status(404).json({
+                    error: 'Ингредиент не найден'
+                });
+            }
 
             sql += `
                 AND bi.ingredient_id = ?
@@ -121,8 +183,8 @@ router.get('/batches', async (req, res) => {
         `;
 
         params.push(
-            Number(limit),
-            Number(offset)
+            checkedLimit,
+            checkedOffset
         );
 
         const batches = await query(sql, params);
@@ -132,6 +194,12 @@ router.get('/batches', async (req, res) => {
     } catch (err) {
 
         console.error(err);
+
+        if (err.status) {
+            return res.status(err.status).json({
+                error: err.message
+            });
+        }
 
         return res.status(500).json({
             error: 'Ошибка получения поставок'
@@ -147,13 +215,20 @@ router.get('/batches/:id', async (req, res) => {
 
         const id = req.params.id;
 
-        const exists = await elementOr404(
+        if (checkId(id) === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
+
+        const batchExists = await elementExists(
             'batch_ingredient',
-            id,
-            res
+            id
         );
 
-        if (!exists) return;
+        if (!batchExists) {
+            return res.status(404).json({
+                error: 'Поставка не найдена'
+            });
+        }
 
         const batch = await queryOne(`
             SELECT
@@ -165,7 +240,7 @@ router.get('/batches/:id', async (req, res) => {
                 bi.factory_id,
                 f.name AS factory_name,
 
-                bi.amount,
+                bi.delivery_kg,
                 bi.delivery_date,
                 bi.expiry_date,
 
@@ -177,7 +252,7 @@ router.get('/batches/:id', async (req, res) => {
             LEFT JOIN ingredients i
                 ON i.id = bi.ingredient_id
 
-            LEFT JOIN factory f
+            LEFT JOIN factories f
                 ON f.id = bi.factory_id
 
             WHERE bi.id = ?
@@ -188,6 +263,12 @@ router.get('/batches/:id', async (req, res) => {
     } catch (err) {
 
         console.error(err);
+
+        if (err.status) {
+            return res.status(err.status).json({
+                error: err.message
+            });
+        }
 
         return res.status(500).json({
             error: 'Ошибка получения поставки'
@@ -204,8 +285,45 @@ router.post('/batches', async (req, res) => {
         const {
             factory_id,
             ingredient_id,
-            amount
+            delivery_kg
         } = req.body;
+
+        // проверка завода
+        if (checkId(factory_id) === null) {
+            return res.status(400).json({ error: "Неверный id завода" })
+        }
+
+        const factoryExists = await elementExists(
+            'factories',
+            factory_id
+        );
+
+        if (!factoryExists) {
+            return res.status(404).json({
+                error: 'Завод не найден'
+            });
+        }
+
+        // проверка ингредиента
+        if (checkId(ingredient_id) === null) {
+            return res.status(400).json({ error: "Неверный id ингредиента" })
+        }
+
+        const ingredientExists = await elementExists(
+            'ingredients',
+            ingredient_id
+        );
+
+        if (!ingredientExists) {
+            return res.status(404).json({
+                error: 'Ингредиент не найден'
+            });
+        }
+
+        if (checkPositiveNumber(delivery_kg) === null) {
+            return res.status(400).json({ error: "Объём поставки должен быть положительным" })
+        }
+
 
         const ingredient = await queryOne(`
             SELECT
@@ -214,31 +332,11 @@ router.post('/batches', async (req, res) => {
             WHERE id = ?
         `, [ingredient_id]);
 
-        if (!ingredient) {
-
-            return res.status(404).json({
-                error: 'Ингредиент не найден'
-            });
-        }
-
-        const factory = await queryOne(`
-            SELECT id
-            FROM factory
-            WHERE id = ?
-        `, [factory_id]);
-
-        if (!factory) {
-
-            return res.status(404).json({
-                error: 'Завод не найден'
-            });
-        }
-
         const result = await runQuery(`
             INSERT INTO batch_ingredient (
                 ingredient_id,
                 factory_id,
-                amount,
+                delivery_kg,
                 delivery_date,
                 expiry_date
             )
@@ -258,7 +356,7 @@ router.post('/batches', async (req, res) => {
         `, [
             ingredient_id,
             factory_id,
-            amount,
+            delivery_kg,
             ingredient.expiration_days
         ]);
 
@@ -272,7 +370,7 @@ router.post('/batches', async (req, res) => {
                 bi.factory_id,
                 f.name AS factory_name,
 
-                bi.amount,
+                bi.delivery_kg,
                 bi.delivery_date,
                 bi.expiry_date,
 
@@ -284,7 +382,7 @@ router.post('/batches', async (req, res) => {
             LEFT JOIN ingredients i
                 ON i.id = bi.ingredient_id
 
-            LEFT JOIN factory f
+            LEFT JOIN factories f
                 ON f.id = bi.factory_id
 
             WHERE bi.id = ?
@@ -295,6 +393,12 @@ router.post('/batches', async (req, res) => {
     } catch (err) {
 
         console.error(err);
+
+        if (err.status) {
+            return res.status(err.status).json({
+                error: err.message
+            });
+        }
 
         return res.status(500).json({
             error: 'Ошибка регистрации поставки'
@@ -310,13 +414,20 @@ router.delete('/batches/:id', async (req, res) => {
 
         const id = req.params.id;
 
-        const exists = await elementOr404(
+        if (checkId(id) === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
+
+        const batchExists = await elementExists(
             'batch_ingredient',
-            id,
-            res
+            id
         );
 
-        if (!exists) return;
+        if (!batchExists) {
+            return res.status(404).json({
+                error: 'Поставка не найдена'
+            });
+        }
 
         await runQuery(`
             DELETE FROM batch_ingredient
@@ -329,6 +440,12 @@ router.delete('/batches/:id', async (req, res) => {
 
         console.error(err);
 
+        if (err.status) {
+            return res.status(err.status).json({
+                error: err.message
+            });
+        }
+
         return res.status(500).json({
             error: 'Ошибка удаления поставки'
         });
@@ -338,8 +455,10 @@ router.delete('/batches/:id', async (req, res) => {
 
 
 router.get('/', async (req, res) => {
+    const { search } = req.query;
+    const params = [];
     try {
-        const ingredients = await query(`
+        let sql = `
             SELECT
                 i.id,
                 i.name,
@@ -347,7 +466,19 @@ router.get('/', async (req, res) => {
                 i.expiration_days
 
             FROM ingredients i
-        `);
+        `;
+
+        if (
+            typeof search === 'string' &&
+            search.trim()
+        ) {
+            sql += `
+                WHERE LOWER(TRIM(i.name)) LIKE LOWER(TRIM(?))
+            `;
+            params.push(`%${search}%`)
+        }
+
+        const ingredients = await query(sql, params);
 
         return res.status(200).json(ingredients);
 
@@ -369,13 +500,21 @@ router.get('/:id', async (req, res) => {
 
         const id = req.params.id;
 
-        const exists = await elementOr404(
+        if (checkId(id) === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
+
+        const ingredientExists = await elementExists(
             'ingredients',
-            id,
-            res
+            id
         );
 
-        if (!exists) return;
+        if (!ingredientExists) {
+            return res.status(404).json({
+                error: 'Ингредиент не найден'
+            });
+        }
+
 
         const ingredient = await queryOne(`
             SELECT
@@ -395,6 +534,12 @@ router.get('/:id', async (req, res) => {
 
         console.error(err);
 
+        if (err.status) {
+            return res.status(err.status).json({
+                error: err.message
+            });
+        }
+
         return res.status(500).json({
             error: 'Ошибка получения ингредиента'
         });
@@ -408,10 +553,54 @@ router.post('/', async (req, res) => {
     try {
 
         const {
-            name,
             price,
-            expiration
+            expiration_days
         } = req.body;
+
+        let { name } = req.body;
+
+        if (!name || typeof name !== 'string') {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+        name = name.trim();
+        if (!name) {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+
+        const ingredientExists = await queryOne(`
+            SELECT name FROM ingredients
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        `, [name]);
+        if (ingredientExists) {
+            return res.status(400).json({
+                error: "Ингредиент с таким названием уже существует"
+            });
+        }
+
+        const checkedPrice = checkPositiveNumber(price);
+
+        if (checkedPrice === null) {
+            return res.status(400).json({
+                error: 'Цена должна быть положительным числом'
+            });
+        }
+        const normalizedPrice = Number(checkedPrice.toFixed(2));
+
+        const checkedExpiration =
+            checkPositiveNumber(expiration_days);
+
+        if (
+            checkedExpiration === null ||
+            !Number.isInteger(checkedExpiration)
+        ) {
+            return res.status(400).json({
+                error: 'Срок годности должен быть целым положительным числом'
+            });
+        }
 
         const created = await runQuery(`
             INSERT INTO ingredients (
@@ -423,8 +612,8 @@ router.post('/', async (req, res) => {
             VALUES (?, ?, ?)
         `, [
             name,
-            price,
-            expiration
+            normalizedPrice,
+            checkedExpiration
         ]);
 
         const ingredient = await queryOne(`
@@ -459,19 +648,68 @@ router.put('/:id', async (req, res) => {
 
         const id = req.params.id;
 
-        const exists = await elementOr404(
-            'ingredients',
-            id,
-            res
-        );
+        if (checkId(id) === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
 
-        if (!exists) return;
+        const ingredientToUpdate = await elementExists('ingredients', id);
+
+        if (!ingredientToUpdate) {
+            return res.status(404).json({
+                error: 'Ингредиент не найден'
+            });
+        }
 
         const {
-            name,
             price,
-            expiration
+            expiration_days
         } = req.body;
+
+        let { name } = req.body;
+
+        if (!name || typeof name !== 'string') {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+        name = name.trim();
+        if (!name) {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+
+        const ingredientExists = await queryOne(`
+            SELECT id, name FROM ingredients
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        `, [name]);
+
+        if (ingredientExists && ingredientExists.id != id)
+            return res.status(400).json({
+                error: "Ингредиент с таким названием уже существует"
+            });
+
+        const checkedPrice = checkPositiveNumber(price);
+        if (checkedPrice === null) {
+            return res.status(400).json({
+                error: 'Цена должна быть положительным числом'
+            });
+        }
+        const normalizedPrice = Number(checkedPrice.toFixed(2));
+
+
+        const checkedExpiration =
+            checkPositiveNumber(expiration_days);
+
+        if (
+            checkedExpiration === null ||
+            !Number.isInteger(checkedExpiration)
+        ) {
+            return res.status(400).json({
+                error: 'Срок годности должен быть целым положительным числом'
+            });
+        }
+
 
         await runQuery(`
             UPDATE ingredients
@@ -484,8 +722,8 @@ router.put('/:id', async (req, res) => {
             WHERE id = ?
         `, [
             name,
-            price,
-            expiration,
+            normalizedPrice,
+            checkedExpiration,
             id
         ]);
 
@@ -507,6 +745,12 @@ router.put('/:id', async (req, res) => {
 
         console.error(err);
 
+        if (err.status) {
+            return res.status(err.status).json({
+                error: err.message
+            });
+        }
+
         return res.status(500).json({
             error: 'Ошибка обновления ингредиента'
         });
@@ -521,13 +765,21 @@ router.delete('/:id', async (req, res) => {
 
         const id = req.params.id;
 
-        const exists = await elementOr404(
+        if (checkId(id) === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
+
+        const ingredientExists = await elementExists(
             'ingredients',
-            id,
-            res
+            id
         );
 
-        if (!exists) return;
+        if (!ingredientExists) {
+            return res.status(404).json({
+                error: 'Ингредиент не найден'
+            });
+        }
+
 
         await runQuery(`
             DELETE FROM ingredients
@@ -539,6 +791,12 @@ router.delete('/:id', async (req, res) => {
     } catch (err) {
 
         console.error(err);
+
+        if (err.status) {
+            return res.status(err.status).json({
+                error: err.message
+            });
+        }
 
         return res.status(500).json({
             error: 'Ошибка удаления ингредиента'
