@@ -9,7 +9,7 @@
  *
  *     parameters:
  *       - in: query
- *         name: factory
+ *         name: factory_id
  *         schema:
  *           type: integer
  *         description: ID завода

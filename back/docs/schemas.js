@@ -85,51 +85,6 @@
  *           type: integer
  *           description: срок годности (в днях)
  *
-
- *
- *     Worker:
- *       type: object
- *
- *       properties:
- *
- *         id:
- *           type: integer
- *
- *         name:
- *           type: string
- *
- *         last_name:
- *           type: string
- *
- *         email:
- *           type: string
- *
- *         role:
- *           type: string
- *           description: Итоговая роль пользователя, вычисляется при авторизации
- *
- *         is_authorized:
- *           type: boolean
- *
- *         factories:
- *           type: array
- *
- *           items:
- *             type: object
- *
- *             properties:
- *
- *               id:
- *                 type: integer
- *
- *               name:
- *                 type: string
- *
- *               role:
- *                 type: string
- *                 description: Роль пользователя на конкретном заводе
- *
- *
  *     ProductBatch:
  *       type: object
  *

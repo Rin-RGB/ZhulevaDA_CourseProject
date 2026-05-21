@@ -196,7 +196,7 @@ router.get('/', async (req, res) => {
     try {
 
         const {
-            factory,
+            factory_id,
             sort,
             limit = 10,
             offset = 0,
@@ -217,12 +217,12 @@ router.get('/', async (req, res) => {
             });
         }
 
-        // factory
+        // factory_id
         if (
-            factory !== undefined &&
+            factory_id !== undefined &&
             (
-                isNaN(Number(factory)) ||
-                Number(factory) < 1
+                isNaN(Number(factory_id)) ||
+                Number(factory_id) < 1
             )
         ) {
             return res.status(400).json({
@@ -242,7 +242,7 @@ router.get('/', async (req, res) => {
             params.push(`%${search.toLowerCase().trim()}%`)
         }
 
-        if (factory) {
+        if (factory_id) {
             const factoryExists = await queryOne(`
                 SELECT id FROM factories 
                 WHERE id = ?
@@ -257,7 +257,7 @@ router.get('/', async (req, res) => {
                         AND fp.factory_id = ?
                     )
                 `;
-                params.push(factory);
+                params.push(factory_id);
             } else {
                 console.log("Завода с таким id не существует");
             }

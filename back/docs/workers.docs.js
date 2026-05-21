@@ -1,5 +1,55 @@
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *
+ *     FactoryRole:
+ *       type: string
+ *       enum:
+ *         - worker
+ *         - manager
+ *         - ceo
+ *
+ *     WorkerFactory:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *
+ *         role:
+ *           $ref: '#/components/schemas/FactoryRole'
+ *
+ *     Worker:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *
+ *         email:
+ *           type: string
+ *           format: email
+ *
+ *         name:
+ *           type: string
+ *
+ *         last_name:
+ *           type: string
+ *
+ *         is_authorized:
+ *           type: boolean
+ *
+ *         role:
+ *           $ref: '#/components/schemas/FactoryRole'
+ *
+ *         factories:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/WorkerFactory'
+ */
+
+
+/**
+ * @swagger
  * /api/workers:
  *   get:
  *     tags:
@@ -9,47 +59,42 @@
  *
  *     parameters:
  *       - in: query
- *         name: factory
- *
+ *         name: factory_id
+ *         description: Фильтр по заводу
  *         schema:
  *           type: integer
  *
  *       - in: query
  *         name: role
+ *         description: Фильтр по роли сотрудника
+ *         schema:
+ *           $ref: '#/components/schemas/FactoryRole'
  *
+ *       - in: query
+ *         name: search
+ *         description: Поиск по имени и фамилии сотрудника
  *         schema:
  *           type: string
- *           enum:
- *             - worker
- *             - manager
- *             - CEO
  *
  *       - in: query
  *         name: limit
- *
+ *         description: Количество записей
  *         schema:
  *           type: integer
  *
  *       - in: query
  *         name: offset
+ *         description: Смещение списка
  *         schema:
  *           type: integer
- * 
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: поиск по названию
  *
  *     responses:
  *       200:
  *         description: Список сотрудников
- *
  *         content:
  *           application/json:
  *             schema:
  *               type: array
- *
  *               items:
  *                 $ref: '#/components/schemas/Worker'
  */
@@ -68,14 +113,12 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *     responses:
  *       200:
  *         description: Информация о сотруднике
- *
  *         content:
  *           application/json:
  *             schema:
@@ -84,6 +127,8 @@
  *       404:
  *         description: Сотрудник не найден
  */
+
+
 /**
  * @swagger
  * /api/workers:
@@ -95,15 +140,20 @@
  *
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - last_name
+ *               - factories
  *
  *             properties:
  *               email:
  *                 type: string
+ *                 format: email
  *
  *               name:
  *                 type: string
@@ -113,30 +163,26 @@
  *
  *               factories:
  *                 type: array
- *
  *                 items:
  *                   type: object
+ *                   required:
+ *                     - id
+ *                     - role
  *
  *                   properties:
- *                     factory_id:
+ *                     id:
  *                       type: integer
  *
  *                     role:
- *                       type: string
- *                       enum:
- *                         - worker
- *                         - manager
- *                         - CEO
+ *                       $ref: '#/components/schemas/FactoryRole'
  *
  *     responses:
  *       201:
  *         description: Сотрудник создан
- *
  *         content:
  *           application/json:
  *             schema:
  *               type: object
- *
  *               properties:
  *                 id:
  *                   type: integer
@@ -145,6 +191,9 @@
  *                   type: string
  *
  *       400:
+ *         description: Некорректные данные запроса
+ *
+ *       409:
  *         description: Email уже существует
  */
 
@@ -162,22 +211,26 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - last_name
+ *               - factories
  *
  *             properties:
  *               email:
  *                 type: string
- * 
+ *                 format: email
+ *
  *               name:
  *                 type: string
  *
@@ -186,30 +239,26 @@
  *
  *               factories:
  *                 type: array
- *
  *                 items:
  *                   type: object
+ *                   required:
+ *                     - id
+ *                     - role
  *
  *                   properties:
- *                     factory_id:
+ *                     id:
  *                       type: integer
  *
  *                     role:
- *                       type: string
- *                       enum:
- *                         - worker
- *                         - manager
- *                         - CEO
+ *                       $ref: '#/components/schemas/FactoryRole'
  *
  *     responses:
  *       200:
  *         description: Сотрудник обновлён
- *
  *         content:
  *           application/json:
  *             schema:
  *               type: object
- *
  *               properties:
  *                 id:
  *                   type: integer
@@ -217,8 +266,14 @@
  *                 message:
  *                   type: string
  *
+ *       400:
+ *         description: Некорректные данные запроса
+ *
  *       404:
  *         description: Сотрудник не найден
+ *
+ *       409:
+ *         description: Email уже существует
  */
 
 
@@ -235,7 +290,6 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *

@@ -11,32 +11,103 @@ const {
 const rolesPriority = {
     worker: 1,
     manager: 2,
-    CEO: 3
+    ceo: 3
 };
+const validRoles = Object.keys(rolesPriority);
 
 function checkEmail(email) {
+    if (!email || typeof email !== 'string') {
+        return null;
+    }
     const clearEmail = email.trim();
     if (!validator.isEmail(clearEmail)) {
         return null;
     }
     return clearEmail;
 }
-// =======================================
-// GET /api/workers
-// список сотрудников
-// =======================================
+
+function checkNumber(num) {
+    if (
+        num === undefined ||
+        num === null ||
+        (typeof num === 'string' && num.trim() === '')
+    ) {
+        return null;
+    }
+
+    const value = Number(num);
+
+    if (Number.isNaN(value)) {
+        return null;
+    }
+
+    return value;
+}
+function checkPositiveNumber(num) {
+    num = checkNumber(num);
+    if (num !== null && num > 0) {
+        return num;
+    }
+    return null;
+}
+
+function checkNonNegativeNumber(num) {
+    const checkedNum = checkNumber(num);
+
+    if (checkedNum !== null && checkedNum >= 0) {
+        return checkedNum;
+    }
+
+    return null;
+}
+
+function checkId(id) {
+    const checkedId = checkNumber(id);
+    if (
+        checkedId === null ||
+        !Number.isInteger(checkedId) ||
+        checkedId < 1
+    ) {
+        return null;
+    }
+    return checkedId;
+}
+
+async function elementExists(table, id) {
+    const allowedTables = [
+        'workers',
+        'factory_worker',
+        'factories'
+    ];
+
+    if (!allowedTables.includes(table)) {
+        const err = new Error('Неверное название таблицы');
+        err.status = 400;
+        throw err;
+    }
+
+    return await queryOne(`
+        SELECT id
+        FROM ${table}
+        WHERE id = ?
+    `, [id]);
+}
 
 router.get('/', async (req, res) => {
 
     try {
 
         const {
-            factory,
             role,
-            limit = 10,
-            offset = 0,
             search
         } = req.query;
+
+        let limit = checkPositiveNumber(req.query.limit);
+        let offset = checkNonNegativeNumber(req.query.offset);
+        let factoryId = req.query.factory_id;
+
+        if (limit === null) { limit = 10 };
+        if (offset === null) { offset = 0 };
 
         let sql = `
             SELECT DISTINCT
@@ -45,7 +116,7 @@ router.get('/', async (req, res) => {
                 w.email,
                 w.name,
                 w.last_name,
-                w.authorized
+                w.is_authorized
 
             FROM workers w
 
@@ -56,47 +127,59 @@ router.get('/', async (req, res) => {
         `;
 
         const params = [];
-        if (search) {
 
+        if (
+            typeof search === 'string' &&
+            search.trim()
+        ) {
             sql += `
                 AND (
-                    w.name LIKE ?
-                    OR w.last_name LIKE ?
+                TRIM(w.last_name) || ' ' || TRIM(w.name) LIKE ?
+                OR
+                TRIM(w.name) || ' ' || TRIM(w.last_name) LIKE ?
                 )
             `;
 
+            const normalizedSearch = search.trim();
+
             params.push(
-                `%${search}%`,
-                `%${search}%`
+                `%${normalizedSearch}%`,
+                `%${normalizedSearch}%`
             );
         }
 
-        if (factory) {
-
-            sql += `
-                AND fw.factory_id = ?
-            `;
-
-            params.push(factory);
+        if (factoryId !== undefined) {
+            factoryId = checkId(factoryId);
+            if (factoryId !== null) {
+                const factoryExists = await elementExists(
+                    'factories',
+                    factoryId
+                );
+                if (factoryExists) {
+                    sql += `
+                        AND fw.factory_id = ?
+                    `;
+                    params.push(factoryId);
+                }
+            }
         }
 
-        if (role) {
-
-            sql += `
-                AND fw.role = ?
-            `;
-
-            params.push(role);
+        if (typeof role === 'string') {
+            const normalizedRole = role.trim().toLowerCase();
+            if (validRoles.includes(normalizedRole)) {
+                sql += `
+                    AND LOWER(TRIM(fw.role)) = ?
+                `;
+                params.push(normalizedRole);
+            }
         }
 
         sql += `
+            ORDER BY LOWER(TRIM(w.last_name)), LOWER(TRIM(w.name))
             LIMIT ? OFFSET ?
         `;
 
-        params.push(
-            parseInt(limit),
-            parseInt(offset)
-        );
+        params.push(limit, offset);
 
         const workers = await query(sql, params);
 
@@ -118,8 +201,8 @@ router.get('/', async (req, res) => {
             for (const f of factories) {
 
                 if (
-                    rolesPriority[f.role] >
-                    rolesPriority[highestRole]
+                    rolesPriority[f.role] &&
+                    rolesPriority[f.role] > rolesPriority[highestRole]
                 ) {
                     highestRole = f.role;
                 }
@@ -141,17 +224,26 @@ router.get('/', async (req, res) => {
     }
 });
 
-
-// =======================================
-// GET /api/workers/:id
-// информация о сотруднике
-// =======================================
-
 router.get('/:id', async (req, res) => {
 
     try {
 
-        const workerId = req.params.id;
+        const workerId = checkId(req.params.id);
+
+        if (workerId === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
+
+        const workerExists = await elementExists(
+            'workers',
+            workerId
+        );
+
+        if (!workerExists) {
+            return res.status(404).json({
+                error: 'Работник не найден'
+            });
+        }
 
         const worker = await queryOne(`
             SELECT
@@ -159,19 +251,12 @@ router.get('/:id', async (req, res) => {
                 email,
                 name,
                 last_name,
-                authorized
+                is_authorized
 
             FROM workers
 
             WHERE id = ?
         `, [workerId]);
-
-        if (!worker) {
-
-            return res.status(404).json({
-                error: 'Сотрудник не найден'
-            });
-        }
 
         const factories = await query(`
             SELECT
@@ -184,19 +269,13 @@ router.get('/:id', async (req, res) => {
             WHERE worker_id = ?
         `, [workerId]);
 
-        const rolesPriority = {
-            worker: 1,
-            manager: 2,
-            CEO: 3
-        };
-
         let highestRole = 'worker';
 
         for (const f of factories) {
 
             if (
-                rolesPriority[f.role] >
-                rolesPriority[highestRole]
+                rolesPriority[f.role] &&
+                rolesPriority[f.role] > rolesPriority[highestRole]
             ) {
                 highestRole = f.role;
             }
@@ -217,27 +296,21 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// =======================================
-// POST /api/workers
-// создание сотрудника
-// =======================================
-
 router.post('/', async (req, res) => {
-
+    let transactionStarted = false;
     try {
 
         const {
             email,
             name,
-            last_name,
-            factories = []
+            last_name
         } = req.body;
+        let { factories = [] } = req.body;
 
-        let validatedEmail = checkEmail(email);
+        const validatedEmail = checkEmail(email);
         if (!validatedEmail) {
             return res.status(400).json({ error: "Неверный формат e-mail" });
         }
-        await runQuery(`BEGIN TRANSACTION`);
 
         const existingWorker = await queryOne(`
             SELECT id
@@ -246,20 +319,77 @@ router.post('/', async (req, res) => {
         `, [validatedEmail]);
 
         if (existingWorker) {
-
-            await runQuery(`ROLLBACK`);
-
-            return res.status(400).json({
+            return res.status(409).json({
                 error: 'Сотрудник с таким email уже существует'
             });
         }
+
+        if (!name || typeof name !== 'string' || !name.trim()) {
+            return res.status(400).json({
+                error: 'Имя обязательно'
+            });
+        }
+        if (!last_name || typeof last_name !== 'string' || !last_name.trim()) {
+            return res.status(400).json({
+                error: 'Фамилия обязательна'
+            });
+        }
+        if (!Array.isArray(factories)) {
+            return res.status(400).json({
+                error: 'Заводы должны быть массивом'
+            });
+        }
+
+        const uniqueFactories = new Set();
+        const validFactories = [];
+        for (const factory of factories) {
+            if (!factory || typeof factory !== 'object') {
+                continue;
+            }
+            if (!factory.role || typeof factory.role !== 'string') {
+                continue;
+            }
+            const id = checkId(factory.id);
+            const role = factory.role.toLowerCase().trim()
+            if (id === null) {
+                continue;
+            }
+            if (uniqueFactories.has(id)) {
+                continue;
+            }
+            const factoryExists = await queryOne(`
+                SELECT id
+                FROM factories
+                WHERE id = ?
+            `, [id]);
+            if (!factoryExists) {
+                continue;
+            }
+            if (!validRoles.includes(role)) {
+                continue;
+            }
+            uniqueFactories.add(id);
+            validFactories.push({
+                id, role
+            });
+        }
+        factories = validFactories;
+
+        if (factories.length === 0) {
+            return res.status(400).json({
+                error: 'Заводы обязательны'
+            });
+        }
+
+        await runQuery(`BEGIN TRANSACTION`);
+        transactionStarted = true;
 
         const result = await runQuery(`
             INSERT INTO workers (
                 email,
                 name,
                 last_name,
-                authorized
+                is_authorized
             )
             VALUES (?, ?, ?, ?)
         `, [
@@ -281,13 +411,14 @@ router.post('/', async (req, res) => {
                 )
                 VALUES (?, ?, ?)
             `, [
-                factory.factory_id,
+                factory.id,
                 workerId,
-                factory.role
+                factory.role.toLowerCase().trim()
             ]);
         }
 
         await runQuery(`COMMIT`);
+        transactionStarted = false;
 
         res.status(201).json({
             id: workerId,
@@ -295,8 +426,11 @@ router.post('/', async (req, res) => {
         });
 
     } catch (err) {
-
-        await runQuery(`ROLLBACK`);
+        if (transactionStarted === true) {
+            try {
+                await runQuery(`ROLLBACK`);
+            } catch { }
+        }
 
         console.error(err);
 
@@ -307,42 +441,112 @@ router.post('/', async (req, res) => {
 });
 
 
-// =======================================
-// PUT /api/workers/:id
-// обновление сотрудника
-// =======================================
-
 router.put('/:id', async (req, res) => {
-
+    let transactionStarted = false;
     try {
+        const workerId = checkId(req.params.id);
 
-        const workerId = req.params.id;
+        if (workerId === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
+
+        const workerExists = await elementExists(
+            'workers',
+            workerId
+        );
+
+        if (!workerExists) {
+            return res.status(404).json({
+                error: 'Работник не найден'
+            });
+        }
 
         const {
             email,
             name,
-            last_name,
-            factories = []
+            last_name
         } = req.body;
-        let validatedEmail = checkEmail(email);
+        let { factories = [] } = req.body;
+
+
+
+        const validatedEmail = checkEmail(email);
         if (!validatedEmail) {
             return res.status(400).json({ error: "Неверный формат e-mail" });
         }
 
-        const worker = await queryOne(`
+        const existingWorker = await queryOne(`
             SELECT id
             FROM workers
-            WHERE id = ?
-        `, [workerId]);
+            WHERE email = ?
+            AND id != ?
+        `, [validatedEmail, workerId]);
 
-        if (!worker) {
+        if (existingWorker) {
+            return res.status(400).json({
+                error: 'Сотрудник с таким email уже существует'
+            });
+        }
 
-            return res.status(404).json({
-                error: 'Сотрудник не найден'
+        if (!name || typeof name !== 'string' || !name.trim()) {
+            return res.status(400).json({
+                error: 'Имя обязательно'
+            });
+        }
+        if (!last_name || typeof last_name !== 'string' || !last_name.trim()) {
+            return res.status(400).json({
+                error: 'Фамилия обязательна'
+            });
+        }
+        if (!Array.isArray(factories)) {
+            return res.status(400).json({
+                error: 'Заводы должны быть массивом'
+            });
+        }
+
+        const uniqueFactories = new Set();
+        const validFactories = [];
+        for (const factory of factories) {
+            if (!factory || typeof factory !== 'object') {
+                continue;
+            }
+            if (!factory.role || typeof factory.role !== 'string') {
+                continue;
+            }
+            const id = checkId(factory.id);
+            const role = factory.role.toLowerCase().trim()
+            if (id === null) {
+                continue;
+            }
+            if (uniqueFactories.has(id)) {
+                continue;
+            }
+            const factoryExists = await queryOne(`
+                SELECT id
+                FROM factories
+                WHERE id = ?
+            `, [id]);
+            if (!factoryExists) {
+                continue;
+            }
+            if (!validRoles.includes(role)) {
+                continue;
+            }
+            uniqueFactories.add(id);
+            validFactories.push({
+                id, role
+            });
+        }
+        factories = validFactories;
+
+        if (factories.length === 0) {
+            return res.status(400).json({
+                error: 'Заводы обязательны'
             });
         }
 
         await runQuery(`BEGIN TRANSACTION`);
+        transactionStarted = true;
 
         await runQuery(`
             UPDATE workers
@@ -375,13 +579,14 @@ router.put('/:id', async (req, res) => {
                 )
                 VALUES (?, ?, ?)
             `, [
-                factory.factory_id,
+                factory.id,
                 workerId,
-                factory.role
+                factory.role.toLowerCase().trim()
             ]);
         }
 
         await runQuery(`COMMIT`);
+        transactionStarted = false;
 
         res.json({
             id: workerId,
@@ -389,8 +594,11 @@ router.put('/:id', async (req, res) => {
         });
 
     } catch (err) {
-
-        await runQuery(`ROLLBACK`);
+        if (transactionStarted) {
+            try {
+                await runQuery(`ROLLBACK`);
+            } catch { }
+        }
 
         console.error(err);
 
@@ -400,28 +608,24 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-
-// =======================================
-// DELETE /api/workers/:id
-// удаление сотрудника
-// =======================================
-
 router.delete('/:id', async (req, res) => {
 
     try {
 
-        const workerId = req.params.id;
+        const workerId = checkId(req.params.id);
 
-        const worker = await queryOne(`
-            SELECT id
-            FROM workers
-            WHERE id = ?
-        `, [workerId]);
+        if (workerId === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
 
-        if (!worker) {
+        const workerExists = await elementExists(
+            'workers',
+            workerId
+        );
 
+        if (!workerExists) {
             return res.status(404).json({
-                error: 'Сотрудник не найден'
+                error: 'Работник не найден'
             });
         }
 

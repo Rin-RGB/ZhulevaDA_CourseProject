@@ -315,7 +315,9 @@ router.post('/', async (req, res) => {
 
     } catch (err) {
         if (transactionStarted) {
-            await runQuery(`ROLLBACK`);
+            try {
+                await runQuery(`ROLLBACK`);
+            } catch { }
         }
 
         console.error(err);

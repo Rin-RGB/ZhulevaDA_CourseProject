@@ -473,9 +473,9 @@ router.get('/', async (req, res) => {
             search.trim()
         ) {
             sql += `
-                WHERE LOWER(TRIM(i.name)) LIKE LOWER(TRIM(?))
+                WHERE LOWER(TRIM(i.name)) LIKE ?
             `;
-            params.push(`%${search}%`)
+            params.push(`%${search.toLowerCase().trim()}%`)
         }
 
         const ingredients = await query(sql, params);
