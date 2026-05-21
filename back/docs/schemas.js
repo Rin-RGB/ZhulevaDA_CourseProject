@@ -45,8 +45,30 @@
  * 
  *         volume:
  *           type: integer
+ * 
+ *     FactoryDetails:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Factory'
+ *         - type: object
+ *           properties:
+ *             managers:
+ *               type: array
  *
+ *               items:
+ *                 type: object
  *
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *
+ *                   name:
+ *                     type: string
+ *
+ *                   last_name:
+ *                     type: string
+ *
+ *                   role:
+ *                     type: string
  *     Ingredient:
  *       type: object
  *       properties:
@@ -134,7 +156,7 @@
  *           type: string
  *           format: date
  *
- *         expiration_date:
+ *         expiry_date:
  *           type: string
  *           format: date
  *

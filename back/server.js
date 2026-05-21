@@ -25,8 +25,8 @@ app.use(cors({
 const productsRouter = require('./routes/products');
 app.use('/api/products', productsRouter);
 
-// const factoriesRouter = require('./routes/factories');
-// app.use('/api/factories', factoriesRouter);
+const factoriesRouter = require('./routes/factories');
+app.use('/api/factories', factoriesRouter);
 
 // const workersRouter = require('./routes/workers');
 // app.use('/api/workers', workersRouter);

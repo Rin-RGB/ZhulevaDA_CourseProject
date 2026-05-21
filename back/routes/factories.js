@@ -7,8 +7,6 @@ const {
     queryOne
 } = require('../db/database');
 
-
-
 function checkNumber(num) {
     if (
         num === undefined ||
@@ -26,7 +24,6 @@ function checkNumber(num) {
 
     return value;
 }
-
 function checkPositiveNumber(num) {
     num = checkNumber(num);
     if (num !== null && num > 0) {
@@ -71,7 +68,7 @@ async function elementExists(table, id) {
     }
 
     return await queryOne(`
-        SELECT id, name
+        SELECT id
         FROM ${table}
         WHERE id = ?
     `, [id]);
@@ -89,27 +86,21 @@ router.get('/', async (req, res) => {
                 f.id,
                 f.name,
                 f.address,
-
                 (
                     SELECT COALESCE(SUM(p.price), 0)
-
                     FROM factory_product fp
-
                     JOIN products p
                         ON p.id = fp.product_id
-
                     WHERE fp.factory_id = f.id
                 ) AS total_value,
 
                 (
                     SELECT COALESCE(SUM(bp.amount), 0)
-
                     FROM batch_product bp
-
                     WHERE bp.factory_id = f.id
                     AND bp.expiry_date > DATE('now')
                 ) AS volume
-            FROM factory f
+            FROM factories f
         `;
 
         if (sort === 'total_value') {
@@ -117,12 +108,13 @@ router.get('/', async (req, res) => {
             sql += `
                 ORDER BY total_value DESC
             `;
-        }
-
-        else if (sort === 'volume') {
-
+        } else if (sort === 'volume') {
             sql += `
                 ORDER BY volume DESC
+            `;
+        } else {
+            sql += `
+                ORDER BY f.id
             `;
         }
 
@@ -140,16 +132,25 @@ router.get('/', async (req, res) => {
     }
 });
 
-// =======================================
-// GET /api/factories/:id
-// информация о заводе
-// =======================================
-
 router.get('/:id', async (req, res) => {
 
     try {
+        const factoryId = checkId(req.params.id);
 
-        const factoryId = req.params.id;
+        if (factoryId === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
+
+        const factoryExists = await elementExists(
+            'factories',
+            factoryId
+        );
+
+        if (!factoryExists) {
+            return res.status(404).json({
+                error: 'Завод не найден'
+            });
+        }
 
         const factory = await queryOne(`
             SELECT
@@ -177,17 +178,10 @@ router.get('/:id', async (req, res) => {
                     AND bp.expiry_date > DATE('now')
                 ) AS volume
 
-            FROM factory f
+            FROM factories f
 
             WHERE f.id = ?
         `, [factoryId]);
-
-        if (!factory) {
-
-            return res.status(404).json({
-                error: 'Завод не найден'
-            });
-        }
 
         // руководители завода
         const managers = await query(`
@@ -222,23 +216,54 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// =======================================
-// POST /api/factories
-// создать завод
-// =======================================
 router.post('/', async (req, res) => {
 
-    try {
+    let transactionStarted = false;
 
-        const {
-            name,
-            address
-        } = req.body;
+    try {
+        let { name, address } = req.body;
+
+        if (!name || typeof name !== 'string') {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+        name = name.trim();
+        if (!name) {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+
+        const factoryExists = await queryOne(`
+            SELECT id FROM factories
+            WHERE LOWER(TRIM(name)) = ? 
+        `, [name.toLowerCase()]);
+
+        if (factoryExists) {
+            return res.status(400).json({
+                error: "Завод с таким названием уже существует"
+            });
+        }
+
+        if (!address || typeof address !== 'string') {
+            return res.status(400).json({
+                error: 'Адрес обязателен'
+            });
+        }
+        address = address.trim();
+        if (!address) {
+            return res.status(400).json({
+                error: 'Адрес обязателен'
+            });
+        }
+
 
         await runQuery(`BEGIN TRANSACTION`);
+        transactionStarted = true;
 
         const result = await runQuery(`
-            INSERT INTO factory (
+            INSERT INTO factories (
                 name,
                 address
             )
@@ -278,18 +303,20 @@ router.post('/', async (req, res) => {
                 name,
                 address
 
-            FROM factory
+            FROM factories
 
             WHERE id = ?
         `, [factoryId]);
 
         await runQuery(`COMMIT`);
+        transactionStarted = false;
 
         res.status(201).json(createdFactory);
 
     } catch (err) {
-
-        await runQuery(`ROLLBACK`);
+        if (transactionStarted) {
+            await runQuery(`ROLLBACK`);
+        }
 
         console.error(err);
 
@@ -299,38 +326,67 @@ router.post('/', async (req, res) => {
     }
 });
 
-
-// =======================================
-// PUT /api/factories/:id
-// обновить завод
-// =======================================
-
 router.put('/:id', async (req, res) => {
 
     try {
+        const factoryId = checkId(req.params.id);
 
-        const factoryId = req.params.id;
+        if (factoryId === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
 
-        const {
-            name,
-            address
-        } = req.body;
+        const factoryToUpdate = await elementExists(
+            'factories',
+            factoryId
+        );
 
-        const existingFactory = await queryOne(`
-            SELECT id
-            FROM factory
-            WHERE id = ?
-        `, [factoryId]);
-
-        if (!existingFactory) {
-
+        if (!factoryToUpdate) {
             return res.status(404).json({
                 error: 'Завод не найден'
             });
         }
 
+        let { name, address } = req.body;
+
+        if (!name || typeof name !== 'string') {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+        name = name.trim();
+        if (!name) {
+            return res.status(400).json({
+                error: 'Название обязательно'
+            });
+        }
+
+        const factoryExists = await queryOne(`
+            SELECT id
+            FROM factories
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+            AND id != ?
+        `, [name, factoryId]);
+
+        if (factoryExists) {
+            return res.status(400).json({
+                error: "Завод с таким названием уже существует"
+            });
+        }
+
+        if (!address || typeof address !== 'string') {
+            return res.status(400).json({
+                error: 'Адрес обязателен'
+            });
+        }
+        address = address.trim();
+        if (!address) {
+            return res.status(400).json({
+                error: 'Адрес обязателен'
+            });
+        }
+
         await runQuery(`
-            UPDATE factory
+            UPDATE factories
             SET
                 name = ?,
                 address = ?
@@ -346,11 +402,11 @@ router.put('/:id', async (req, res) => {
                 id,
                 name,
                 address
-            FROM factory
+            FROM factories
             WHERE id = ?
         `, [factoryId]);
 
-        res.status(201).json(updatedFactory);
+        res.status(200).json(updatedFactory);
 
     } catch (err) {
 
@@ -363,32 +419,29 @@ router.put('/:id', async (req, res) => {
 });
 
 
-// =======================================
-// DELETE /api/factories/:id
-// удалить завод
-// =======================================
-
 router.delete('/:id', async (req, res) => {
 
     try {
+        const factoryId = checkId(req.params.id);
 
-        const factoryId = req.params.id;
+        if (factoryId === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
 
-        const existingFactory = await queryOne(`
-            SELECT id
-            FROM factory
-            WHERE id = ?
-        `, [factoryId]);
+        const factoryExists = await elementExists(
+            'factories',
+            factoryId
+        );
 
-        if (!existingFactory) {
-
+        if (!factoryExists) {
             return res.status(404).json({
                 error: 'Завод не найден'
             });
         }
 
+
         await runQuery(`
-            DELETE FROM factory
+            DELETE FROM factories
             WHERE id = ?
         `, [factoryId]);
 
@@ -405,55 +458,43 @@ router.delete('/:id', async (req, res) => {
 });
 
 
-// =======================================
-// POST /api/factories/:id/products
-// добавить продукт на завод
-// =======================================
-
 router.post('/:id/products', async (req, res) => {
 
     try {
 
-        const factoryId = req.params.id;
+        const factoryId = checkId(req.params.id);
+        const productId = checkId(req.body.product_id);
 
-        const {
-            product_id
-        } = req.body;
+        if (factoryId === null || productId === null) {
+            return res.status(400).json({
+                error: 'Неверный id'
+            });
+        }
 
-        const factory = await queryOne(`
-            SELECT id
-            FROM factory
-            WHERE id = ?
-        `, [factoryId]);
+        const factoryExists = await elementExists(`factories`, factoryId);
 
-        if (!factory) {
-
+        if (!factoryExists) {
             return res.status(404).json({
                 error: 'Завод не найден'
             });
         }
 
-        const product = await queryOne(`
-            SELECT id
-            FROM products
-            WHERE id = ?
-        `, [product_id]);
+        const productExists = await elementExists(`products`, productId);
 
-        if (!product) {
-
+        if (!productExists) {
             return res.status(404).json({
                 error: 'Продукт не найден'
             });
         }
 
         const existingRelation = await queryOne(`
-            SELECT *
+            SELECT 1
             FROM factory_product
             WHERE factory_id = ?
               AND product_id = ?
         `, [
             factoryId,
-            product_id
+            productId
         ]);
 
         if (existingRelation) {
@@ -471,7 +512,7 @@ router.post('/:id/products', async (req, res) => {
             VALUES (?, ?)
         `, [
             factoryId,
-            product_id
+            productId
         ]);
 
         res.status(201).json({
@@ -488,32 +529,46 @@ router.post('/:id/products', async (req, res) => {
     }
 });
 
-
-// =======================================
-// DELETE /api/factories/:id/products/:product_id
-// удалить изделие с завода
-// =======================================
-
 router.delete('/:id/products/:product_id', async (req, res) => {
 
     try {
 
-        const {
-            id: factoryId,
-            product_id
-        } = req.params;
+        const factoryId = checkId(req.params.id);
+        const productId = checkId(req.params.product_id);
 
-        const relation = await queryOne(`
-            SELECT *
+        if (factoryId === null || productId === null) {
+            return res.status(400).json({
+                error: 'Неверный id'
+            });
+        }
+
+        const factoryExists = await elementExists(`factories`, factoryId);
+
+        if (!factoryExists) {
+            return res.status(404).json({
+                error: 'Завод не найден'
+            });
+        }
+
+        const productExists = await elementExists(`products`, productId);
+
+        if (!productExists) {
+            return res.status(404).json({
+                error: 'Продукт не найден'
+            });
+        }
+
+        const existingRelation = await queryOne(`
+            SELECT 1
             FROM factory_product
             WHERE factory_id = ?
               AND product_id = ?
         `, [
             factoryId,
-            product_id
+            productId
         ]);
 
-        if (!relation) {
+        if (!existingRelation) {
 
             return res.status(404).json({
                 error: 'Связь не найдена'
@@ -526,12 +581,10 @@ router.delete('/:id/products/:product_id', async (req, res) => {
               AND product_id = ?
         `, [
             factoryId,
-            product_id
+            productId
         ]);
 
-        res.json({
-            message: 'Изделие удалено с завода'
-        });
+        res.sendStatus(204);
 
     } catch (err) {
 

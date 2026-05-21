@@ -310,7 +310,6 @@ router.get('/', async (req, res) => {
             sql += `
                 ORDER BY p.id
             `;
-            console.log("Такой сортировки не существует. Отсортировано по id")
         };
 
         sql += `

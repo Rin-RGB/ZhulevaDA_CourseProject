@@ -10,24 +10,20 @@
  *     parameters:
  *       - in: query
  *         name: sort
- *
  *         schema:
  *           type: string
  *           enum:
  *             - total_value
  *             - volume
- *
  *         description: Сортировка по суммарной стоимости продукции или объёму производства
  *
  *     responses:
  *       200:
  *         description: Список заводов
- *
  *         content:
  *           application/json:
  *             schema:
  *               type: array
- *
  *               items:
  *                 $ref: '#/components/schemas/Factory'
  */
@@ -46,18 +42,16 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *     responses:
  *       200:
  *         description: Информация о заводе
- *
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Factory'
+ *               $ref: '#/components/schemas/FactoryDetails'
  *
  *       404:
  *         description: Завод не найден
@@ -75,11 +69,13 @@
  *
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - address
  *
  *             properties:
  *               name:
@@ -91,7 +87,6 @@
  *     responses:
  *       201:
  *         description: Завод создан
- *
  *         content:
  *           application/json:
  *             schema:
@@ -112,17 +107,18 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - address
  *
  *             properties:
  *               name:
@@ -134,7 +130,6 @@
  *     responses:
  *       200:
  *         description: Завод обновлён
- *
  *         content:
  *           application/json:
  *             schema:
@@ -158,7 +153,6 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
@@ -184,17 +178,17 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - product_id
  *
  *             properties:
  *               product_id:
@@ -203,21 +197,19 @@
  *     responses:
  *       201:
  *         description: Изделие добавлено
- *
  *         content:
  *           application/json:
  *             schema:
  *               type: object
- *
  *               properties:
  *                 message:
  *                   type: string
  *
+ *       400:
+ *         description: Неверный id или изделие уже добавлено
+ *
  *       404:
  *         description: Завод или изделие не найдены
- *
- *       400:
- *         description: Изделие уже добавлено на завод
  */
 
 
@@ -234,30 +226,19 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *       - in: path
  *         name: product_id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *     responses:
- *       200:
+ *       204:
  *         description: Изделие удалено с завода
  *
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *
- *               properties:
- *                 message:
- *                   type: string
- *
  *       404:
- *         description: Связь не найдена
+ *         description: Завод, изделие или связь не найдены
  */
