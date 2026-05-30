@@ -369,7 +369,7 @@
  *
  *                   properties:
  *
- *                     factory_id:
+ *                     id:
  *                       type: integer
  *
  *     responses:

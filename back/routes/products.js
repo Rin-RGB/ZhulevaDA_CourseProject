@@ -237,7 +237,7 @@ router.get('/', async (req, res) => {
 
         if (search) {
             whereSql += `
-                AND LOWER(TRIM(p.name)) LIKE ?
+                AND LOWER(TRIM(p.name)) LIKE ? COLLATE NOCASE
             `;
             params.push(`%${search.toLowerCase().trim()}%`)
         }
@@ -246,7 +246,7 @@ router.get('/', async (req, res) => {
             const factoryExists = await queryOne(`
                 SELECT id FROM factories 
                 WHERE id = ?
-                `, [factory]);
+                `, [factory_id]);
 
             if (factoryExists) {
                 whereSql += `
@@ -583,19 +583,24 @@ router.post('/', async (req, res) => {
                 continue;
             }
             const id = Number(ingredient.id);
-            if (isNaN(Number(ingredient.quantity_kg)) ||
-                Number(ingredient.quantity_kg) < 0) {
-                console.log('Вес ингредиента должен быть положительным числом');
-                continue;
-            }
-            const quantity = Number(ingredient.quantity_kg);
             if (
-                isNaN(id) ||
-                isNaN(quantity) ||
-                quantity < 0
+                isNaN(id)
             ) {
                 continue;
             }
+            const quantity = Number(
+                String(ingredient.quantity_kg)
+                    .replace(',', '.')
+                    .trim()
+            );
+
+            if (isNaN(quantity) || quantity < 0) {
+                console.log(
+                    'Вес ингредиента должен быть положительным числом'
+                );
+                continue;
+            }
+            
             const ingredientExists = await queryOne(`
                 SELECT id
                 FROM ingredients
@@ -954,13 +959,11 @@ router.put('/:id', async (req, res) => {
             productId
         ]);
 
-        // удаляем старый recipes
         await runQuery(`
             DELETE FROM recipes
             WHERE product_id = ?
         `, [productId]);
 
-        // создаём новый recipes
         for (const ingredient of ingredients) {
 
             await runQuery(`

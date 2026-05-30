@@ -11,36 +11,7 @@
 
 ## 1. Аутентификация (`/auth`)
 
-### 1.1 Регистрация пользователя руководителем
-
-`POST /auth/register`
-
-Руководитель регистрирует работника с помощью формы, id задаётся автоматически с помощью nanoid, password = null, authorized = false
-
-**Тело запроса:**
-```json
-{
-  "email": "worker@bakery.com",
-  "name": "Иван",
-  "last_name": "Петров",
-  "role": "worker",
-  "factory_id": 2,
-  "role_at_factories": ["worker", "manager"]
-}
-```
-
-**Ответ:** `201 Created`
-```json
-{
-  "id": 5,
-  "message": "Пользовательская почта зарегистрирована"
-}
-```
-
-**Права доступа:** руководитель завода (только в "свои" заводы), либо руководитель комбината
-
----
-### 1.2 Регистрация пользователя
+### 1.1 Регистрация пользователя
 
 `POST /auth/register-user`
 
@@ -65,7 +36,7 @@
 ---
 
 
-### 1.3 Вход в систему
+### 1.2 Вход в систему
 
 `POST /auth/login`
 При входе создаётся refresh токен, который добавляется в cookie
@@ -87,7 +58,7 @@
 
 ---
 
-### 1.4 Обновление токена
+### 1.3 Обновление токена
 
 `POST /auth/refresh`
 
@@ -102,7 +73,7 @@
 
 ---
 
-### 1.5 Выход из системы
+### 1.4 Выход из системы
 
 `POST /auth/logout`
 
@@ -114,25 +85,6 @@
   "message": "Выход выполнен"
 }
 ```
-
-### 1.6 Регистрация пользователем
-
-`POST /auth/activate`
-
-**Тело запроса**
-
-```json
-{
-  "email": "worker@bakery.com",
-  "password": "new_password123"
-}
-```
-**Ответ:** `200 OK`
-```json
-{   "message": "Аккаунт активирован"    }
-```
-
----
 
 ## 2. Текущий пользователь (`/me`)
 
@@ -162,18 +114,18 @@
 
 ### 3.1 Список всех изделий
 
-`GET /products/?factory={factory_id}&sort={string}&limit={10}&offset={0}&search={string}`
+`GET /products/?factory_id={factory_id}&sort={string}&limit={10}&offset={0}&search={string}`
 
 **Параметры запроса:**
 | Параметр | Тип | Описание |
 |----------|-----|----------|
-| `factory` | integer | ID завода, позволяет задать фильтрацию по заводу |
+| `factory_id` | integer | ID завода, позволяет задать фильтрацию по заводу |
 | `sort` | string | 'ingredients' или 'profit' - сортировка по количеству ингредиентов или по прибыли соответственно |
 | `limit` | integer | Количество товаров на странице |
 | `offset` | integer | Отступ от начала массива для переключения страниц |
 | `search` | string | Поиск по названию |
 
-**Пример:** `GET /products?factory=1&limit=10&offset=0``
+**Пример:** `GET /products?factory_id=1&limit=10&offset=0``
 
 **Ответ:** `200 OK`
 ```json
@@ -188,7 +140,14 @@
     "ingredients_count": 4,
   }
 ],
-"summary": 55000}
+"summary": 55000,
+"pagination":
+  {
+    "total": 15,
+    "limit": 10,
+    "offset": 0
+  }
+}
 ```
 
 **Права доступа:** все авторизованные
@@ -215,8 +174,8 @@
     "profit": 50.60,
     "ingredients_count": 4,
     "factories": [
-        { "factory_id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1",  "total_produced": 20 },
-        { "factory_id": 2, "name": "Завод №2", "address": "ул. Пирогова, 1",  "total_produced": 50 }
+        { "id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1",  "total_produced": 20 },
+        { "id": 2, "name": "Завод №2", "address": "ул. Пирогова, 1",  "total_produced": 50 }
     ]
 }
 ```
@@ -235,12 +194,12 @@
     "expiration_days": 3,
     "price": 120.00,
     "ingredients": [
-      { "ingredient_id": 1, "quantity_kg": 0.020 },
-      { "ingredient_id": 2, "quantity_kg": 0.480 }
+      { "id": 1, "quantity_kg": 0.020 },
+      { "id": 2, "quantity_kg": 0.480 }
     ],
     "factories": [
-      { "factory_id": 1 },
-      { "factory_id": 2 }
+      { "id": 1 },
+      { "id": 2 }
     ]
 }
 ```
@@ -256,12 +215,12 @@
     "profit": 50.60,
     "ingredients_count": 2,
     "factories": [
-        { "factory_id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1" },
-        { "factory_id": 2, "name": "Завод №2", "address": "ул. Пирогова, 1" }
+        { "id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1" },
+        { "id": 2, "name": "Завод №2", "address": "ул. Пирогова, 1" }
     ]
 }
 ```
-**Права доступа:** Руководитель завода (руководитель комбината может создать ингредиент с factory: none для хранения информации до распределения на заводы)
+**Права доступа:** Руководитель комбината
 
 ---
 ### 3.4 Изменить информацию об изделии
@@ -281,8 +240,8 @@
     "expiration_days": 3,
     "price": 120.00,
     "ingredients": [
-        { "ingredient_id": 1, "quantity_kg": 0.020 },
-        { "ingredient_id": 2, "quantity_kg": 0.480 }
+        { "id": 1, "quantity_kg": 0.020 },
+        { "id": 2, "quantity_kg": 0.480 }
     ],
 }
 ```
@@ -324,8 +283,8 @@
     "id": 1,
     "name": "Батон нарезной",
     "factories": [
-        { "factory_id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1", "total_produced": 20 },
-        { "factory_id": 2, "name": "Завод №2", "address": "ул. Пекарная, 5", "total_produced": 0 }
+        { "id": 1, "name": "Завод №1", "address": "ул. Хлебная, 1", "total_produced": 20 },
+        { "id": 2, "name": "Завод №2", "address": "ул. Пекарная, 5", "total_produced": 0 }
     ]
 }
 ```
@@ -360,12 +319,12 @@
 ```json
 [
   {
-    "ingredient_id": 1,
+    "id": 1,
     "name": "Мука",
     "quantity_kg": 0.8
   },
   {
-    "ingredient_id": 2,
+    "id": 2,
     "name": "Дрожжи",
     "quantity_kg": 0.1
   }
@@ -384,9 +343,9 @@
 **Параметры запроса:**
 | Параметр | Тип | Описание |
 |----------|-----|----------|
-| `sort` | string | 'total_value' или 'count' - сортировка по суммарной стоимости или по объёму производства соответственно |
+| `sort` | string | 'total_value' или 'volume' - сортировка по суммарной стоимости или по объёму производства соответственно |
 
-**Пример:** `GET /factories?sort="count"`
+**Пример:** `GET /factories?sort="volume"`
 
 
 **Ответ:** `200 OK`
@@ -432,7 +391,7 @@
   "managers":
   [
     {
-      "manager_id": 1,
+      "id": 1,
       "name": "Анна",
       "last_name": "Королёва",
       "role": "CEO"
@@ -566,12 +525,12 @@
 
 ### 5.1 Список сотрудников
 
-`GET /workers?factory={id}&role={string}&limit={10}&offset={0}&search={string}`
+`GET /workers?factory_id={id}&role={string}&limit={10}&offset={0}&search={string}`
 
 **Параметры запроса:**
 | Параметр | Тип | Описание |
 |----------|-----|----------|
-| `factory` | integer | Фильтр по заводу |
+| `factory_id` | integer | Фильтр по заводу |
 | `role` | string | Фильтр по роли (`worker`, `manager`, `CEO`) |
 | `limit` | integer | Количество записей |
 | `offset` | integer | Отступ для пагинации |
@@ -619,8 +578,8 @@
   "role": "worker",
   "authorized": true,
   "factories": [
-    { "factory_id": 1, "name": "Хлебозавод №1", "role": "worker" },
-    { "factory_id": 2, "name": "Хлебозавод №2", "role": "worker" }
+    { "id": 1, "name": "Хлебозавод №1", "role": "worker" },
+    { "id": 2, "name": "Хлебозавод №2", "role": "worker" }
   ]
 }
 ```
@@ -640,7 +599,7 @@
   "name": "Пётр",
   "last_name": "Сидоров",
   "factories": [
-    { "factory_id": 1, "role": "worker" }
+    { "id": 1, "role": "worker" }
   ]
 }
 ```
@@ -671,8 +630,8 @@
   "name": "Пётр",
   "last_name": "Иванов",
   "factories": [
-    { "factory_id": 1, "role": "manager" },
-    { "factory_id": 2, "role": "worker" }
+    { "id": 1, "role": "manager" },
+    { "id": 2, "role": "worker" }
   ]
 }
 ```
@@ -708,7 +667,14 @@
 
 ### 6.1 Список ингредиентов
 
-`GET /ingredients`
+`GET /ingredients?search={string}`
+
+
+**Параметры запроса:**
+| Параметр | Тип | Описание |
+|----------|-----|----------|
+| `search` | string | Поиск по названию |
+
 
 **Ответ:** `200 OK`
 ```json
@@ -956,7 +922,7 @@
     "factory_name": "Хлебозавод №2", 
     "amount": 500,
     "production_date": "2024-05-20",
-    "expiration_date": "2024-05-30",
+    "expiry_date": "2024-05-30",
     "is_fresh": false
   }
 ]
@@ -985,7 +951,7 @@
     "factory_name": "Хлебозавод №2", 
     "amount": 500,
     "production_date": "2024-05-20",
-    "expiration_date": "2024-05-30",
+    "expiry_date": "2024-05-30",
     "is_fresh": false
 }
 ```
@@ -1016,7 +982,7 @@
     "factory_name": "Хлебозавод №2",
     "amount": 500,
     "production_date": "2024-05-20",
-    "expiration_date": "2024-05-30",
+    "expiry_date": "2024-05-30",
     "is_fresh": false
 }
 ```

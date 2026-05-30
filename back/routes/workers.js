@@ -134,9 +134,9 @@ router.get('/', async (req, res) => {
         ) {
             sql += `
                 AND (
-                TRIM(w.last_name) || ' ' || TRIM(w.name) LIKE ?
+                TRIM(w.last_name) || ' ' || TRIM(w.name) LIKE ? COLLATE NOCASE
                 OR
-                TRIM(w.name) || ' ' || TRIM(w.last_name) LIKE ?
+                TRIM(w.name) || ' ' || TRIM(w.last_name) LIKE ? COLLATE NOCASE
                 )
             `;
 
