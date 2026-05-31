@@ -203,6 +203,7 @@ router.get('/', async (req, res) => {
             search
         } = req.query;
 
+        let {not_factory_id = null} = req.query;
         // limit
         if (isNaN(Number(limit)) || Number(limit) < 0) {
             return res.status(400).json({
@@ -228,6 +229,16 @@ router.get('/', async (req, res) => {
             return res.status(400).json({
                 error: 'Некорректный id завода'
             });
+        }
+        if (
+            not_factory_id !== null &&
+            (
+                isNaN(Number(not_factory_id)) ||
+                Number(not_factory_id) < 1
+            )
+        ) {
+            console.log('Некорректный id завода');
+            not_factory_id = null;
         }
 
         const params = [];
@@ -258,6 +269,26 @@ router.get('/', async (req, res) => {
                     )
                 `;
                 params.push(factory_id);
+            } else {
+                console.log("Завода с таким id не существует");
+            }
+        }
+        if (not_factory_id) {
+            const NotFactoryExists = await queryOne(`
+                SELECT id FROM factories 
+                WHERE id = ?
+                `, [not_factory_id]);
+
+            if (NotFactoryExists) {
+                whereSql += `
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM factory_product fp
+                        WHERE fp.product_id = p.id
+                        AND fp.factory_id = ?
+                    )
+                `;
+                params.push(not_factory_id);
             } else {
                 console.log("Завода с таким id не существует");
             }

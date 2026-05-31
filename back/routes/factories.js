@@ -118,7 +118,29 @@ router.get('/', async (req, res) => {
             `;
         }
 
-        const factories = await query(sql);
+        const factoriesData = await query(sql);
+        let factories = [];
+
+        for (const factory of factoriesData) {
+            const factoryId = factory.id;
+            const managers = await query(`
+                SELECT
+
+                    w.id,
+                    w.name,
+                    w.last_name,
+                    fw.role
+
+                FROM factory_worker fw
+
+                JOIN workers w
+                    ON w.id = fw.worker_id
+
+                WHERE fw.factory_id = ?
+                AND fw.role IN ('manager', 'ceo')
+            `, [factoryId]);
+            factories.push({...factory, managers});
+        }
 
         res.json(factories);
 
@@ -198,7 +220,7 @@ router.get('/:id', async (req, res) => {
                 ON w.id = fw.worker_id
 
             WHERE fw.factory_id = ?
-              AND fw.role IN ('manager', 'CEO')
+              AND fw.role IN ('manager', 'ceo')
         `, [factoryId]);
 
         res.json({
@@ -280,7 +302,7 @@ router.post('/', async (req, res) => {
 
             FROM factory_worker
 
-            WHERE role = 'CEO'
+            WHERE role = 'ceo'
         `);
 
         for (const ceo of ceos) {
@@ -290,7 +312,7 @@ router.post('/', async (req, res) => {
                     worker_id,
                     role
                 )
-                VALUES (?, ?, 'CEO')
+                VALUES (?, ?, 'ceo')
             `, [
                 factoryId,
                 ceo.worker_id

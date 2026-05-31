@@ -1,0 +1,46 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+export default function FactoryRow({ factory, sort }) {
+    const navigate = useNavigate();
+    const [ceos, setCeos] = useState([]);
+    const [managers, setManagers] = useState([]);
+    useEffect(() => {
+
+        if (!factory?.managers) return;
+        setCeos(factory.managers.
+            filter(u => u.role === 'ceo').
+            map(m => `${m.name} ${m.last_name}`));
+        setManagers(factory.managers.
+            filter(u => u.role === 'manager').
+            map(m => `${m.name} ${m.last_name}`));
+    }, [factory])
+
+    return (
+        <tr>
+
+            <td>
+                {factory.name}
+            </td>
+
+            <td>
+                {factory.address}
+            </td>
+
+            <td>
+                <p>CEO: {ceos.join(', ')}</p>
+                {managers.length > 0 &&
+                    <p>Руководители завода: {managers.join(', ')}</p>
+                }
+            </td>
+
+            <td onClick={() => navigate(`/factory/${factory.id}`)}>
+                <span>Перейти на страницу завода ↳</span>
+            </td>
+
+            <td>
+                {sort === "total_value" ? factory.total_value : factory.volume}
+            </td>
+
+        </tr>
+    )
+}

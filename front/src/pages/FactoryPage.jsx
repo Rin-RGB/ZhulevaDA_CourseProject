@@ -1,43 +1,55 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/index";
 
-import ProductModal
-    from "../components/ProductCatalogue/ProductModal";
+import FormField from "../components/FormField";
+import FactoryProductRow from "../components/Factories/FactoryProductRow";
+import AddProductModal from "../components/Factories/AddProductModal";
 
-import ProductRow
-    from "../components/ProductCatalogue/ProductRow";
-
-
-
-export default function ProductCatalogue() {
+export default function FactoryPage() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [factory, setFactory] = useState("");
+    const [form, setForm] = useState({
+        name: '',
+        address: ''
+    });
 
     const [products, setProducts] = useState([]);
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState("profit");
     const [factories, setFactories] = useState([]);
-    const [selectedFactory, setSelectedFactory] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [selectedProduct, setSelectedProduct] = useState(null);
     const [pageInfo, setPageInfo] = useState({});
     const [page, setPage] = useState(0);
     const [pageInput, setPageInput] = useState('1')
 
-
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [mode, setMode] = useState('read');
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState("read");
 
-    const loadProducts = async (offset = 0) => {
-
+    const loadFactory = async () => {
         try {
             setLoading(true);
-            setError("");
-
+            const selectedFactory = await api.getFactoryById(id);
+            setFactory(selectedFactory);
+            setForm({
+                name: selectedFactory.name,
+                address: selectedFactory.address
+            })
+        } catch {
+            setError('Ошибка загрузки заводов');
+        } finally {
+            setLoading(false);
+        }
+    }
+    const loadProducts = async (offset = 0) => {
+        try {
             const data = await api.getProducts({
                 search,
                 sort,
-                factory_id: selectedFactory || undefined,
+                factory_id: id,
                 offset
             });
             const pagination = data.pagination;
@@ -54,32 +66,22 @@ export default function ProductCatalogue() {
             });
             setPage(Math.floor(pagination.offset / pagination.limit) + 1);
             setPageInput(Math.floor(pagination.offset / pagination.limit) + 1);
-
         } catch (err) {
+
             console.error(err);
             setError("Ошибка загрузки продуктов");
+
         } finally {
             setLoading(false);
         }
-
-    };
-
-    const loadFactories = async () => {
-        try {
-            const response = await api.getFactories();
-            setFactories(response);
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    }
 
     useEffect(() => {
-        loadFactories();
-    }, []);
-
+        loadFactory();
+    }, [id]);
     useEffect(() => {
         loadProducts();
-    }, [search, sort, selectedFactory]);
+    }, [search, sort, id]);
 
     if (loading) {
         return <h2>Загрузка...</h2>;
@@ -89,135 +91,103 @@ export default function ProductCatalogue() {
         return <h2>{error}</h2>;
     }
 
-    const onRead = async (product) => {
-        setSelectedProduct(product);
-        setModalMode('read');
-        setModalOpen(true);
-    }
+    function handleChange(field, value) {
 
-    const closeModal = async () => {
-        setModalOpen(false);
-        setSelectedProduct(null);
-    }
-
+        setForm(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
     const onDelete = async (productId) => {
-
         try {
             const agreement = window.confirm(
-                "Вы уверены, что хотите удалить изделие?"
+                "Вы уверены, что хотите удалить изделие с завода?"
             );
             if (!agreement) return;
-            await api.deleteProduct(productId);
+            await api.deleteProductFromFactory(id, productId);
             await loadProducts();
-            setSelectedProduct(null);
+            await loadFactory();
 
         } catch (err) {
             console.error(err);
         }
     };
-    const onEdit = async () => {
-        setModalMode('edit');
-        setModalOpen(true);
+    const onEdit = async (factory) => {
+        await api.updateFactory(id, factory);
+        loadFactory();
     }
-    const switchToRead = async () => {
-        setModalMode('read');
-        setModalOpen(true);
-    }
-    const onCreate = async () => {
-        setModalMode("create");
-        setModalOpen(true);
-    }
-    const onSubmit = async (product, factories) => {
-        const factoriesData = factories.map(id => ({
-            id
-        }));
-        if (modalMode === 'edit') {
-            await api.updateProduct(product.id, product);
-            await api.updateProductFactories(product.id, factoriesData);
-            loadProducts();
-            setModalMode('read');
-        } else if (modalMode === 'create') {
-            const productData = product;
-            productData.factories = factoriesData;
-            const createdProduct = await api.createProduct(product);
-            loadProducts();
-            setSelectedProduct(createdProduct);
-            setModalMode('read');
+    const addProduct = async (products) => {
+        for (const productId of products) {
+            await api.addProductToFactory(id, productId);
         }
+        loadProducts();
+        setModalOpen(false);
+        window.alert('Изделия добавлены')
     }
-
     return (
         <div>
+            <button onClick={() => navigate(`/factories`)}>
+                ← Назад
+            </button>
+            <FormField
+                label="Название"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                mode={mode}
+                labelRequired={false}
+            />
+            <FormField
+                label="Адрес"
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                mode={mode}
+            />
+            {mode === 'edit' ?
+                <button onClick={() => setMode('read')}>Отменить</button>
+                :
+                <button onClick={() => setMode('edit')}>Редактировать</button>
+            }
+            {mode === 'edit' &&
+                <button onClick={() => {
+                    onEdit(form);
+                    setMode('read');
+                }
+                }>Сохранить</button>}
 
-            <h1>Каталог изделий</h1>
+            <h1>Изделия завода</h1>
+            <p>Сумма изделий: {factory.total_value}</p>
 
-            <div>
-
-                <input
-                    type="text"
-                    placeholder="Поиск..."
-                    value={searchInput}
-                    onChange={(e) =>
-                        setSearchInput(e.target.value)
+            <input
+                type="text"
+                placeholder="Поиск..."
+                value={searchInput}
+                onChange={(e) =>
+                    setSearchInput(e.target.value)
+                }
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                        setSearch(searchInput);
                     }
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            setSearch(searchInput);
-                        }
-                    }}
-                />
+                }}
+            />
 
-                <button
-                    onClick={() => {
-                        setSort(prev =>
-                            prev === "profit"
-                                ? "ingredients"
-                                : "profit"
-                        );
-                    }}
-                >
-                    {
-                        sort === "profit"
-                            ? "Сортировать по ингредиентам"
-                            : "Сортировать по прибыли"
-                    }
-                </button>
-
-                <select
-                    value={selectedFactory}
-
-                    onChange={(e) =>
-                        setSelectedFactory(e.target.value)
-                    }
-                >
-
-                    <option value="">
-                        Все заводы
-                    </option>
-                    {
-                        factories.map(factory => (
-                            <option
-                                key={factory.id}
-                                value={factory.id}
-                            >
-                                {factory.name}
-                            </option>
-                        ))
-                    }
-
-                </select>
-
-                <button
-                    onClick={onCreate}
-                >
-                    {
-                        "Добавить изделие"
-                    }
-                </button>
-
-
-            </div>
-
+            <button
+                onClick={() => {
+                    setSort(prev =>
+                        prev === "profit"
+                            ? "ingredients"
+                            : "profit"
+                    );
+                }}
+            >
+                {
+                    sort === "profit"
+                        ? "Сортировать по ингредиентам"
+                        : "Сортировать по прибыли"
+                }
+            </button>
             {
                 products.length !== 0 ?
                     <>
@@ -229,16 +199,18 @@ export default function ProductCatalogue() {
                                     <th>Цена</th>
                                     <th>Срок годности</th>
                                     <th>{sort === "profit" ? "Прибыль" : "Ингредиенты"}</th>
+                                    <th>Удалить с завода</th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 {
                                     products.map(product => (
-                                        <ProductRow
+                                        <FactoryProductRow
                                             key={product.id}
+                                            onDelete={() => onDelete(product.id, id)}
+                                            onClick={()=>{}}
                                             product={product}
-                                            onRead={onRead}
                                             sort={sort}
                                         />
                                     ))
@@ -269,7 +241,6 @@ export default function ProductCatalogue() {
                                         }}
                                         onKeyDown={(e) => {
                                             if (e.key !== "Enter") return;
-
                                             let newPage = Number(pageInput);
 
                                             if (newPage > pageInfo.totalPages) {
@@ -303,19 +274,17 @@ export default function ProductCatalogue() {
                     :
                     <h2>Нет изделий</h2>
             }
+            <button onClick={() => setModalOpen(true)}>
+                Добавить изделие +
+            </button>
             {modalOpen && (
-                <ProductModal
+                <AddProductModal
                     open={modalOpen}
-                    productId={selectedProduct ? selectedProduct.id : null}
-                    onRead={switchToRead}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onSubmit={onSubmit}
-                    onClose={closeModal}
-                    modalMode={modalMode}
+                    factoryId={id}
+                    onSubmit={addProduct}
+                    onClose={() => setModalOpen(false)}
                 />
             )}
-        </div>
+        </div >
     );
 }
-

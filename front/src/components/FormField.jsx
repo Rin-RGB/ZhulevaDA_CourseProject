@@ -4,13 +4,19 @@ export default function FormField({
     name,
     onChange,
     type = "text",
-    mode
+    mode,
+    labelRequired = true
 }) {
     return (
         <div className={`field field-${mode}`}>
             {mode === "read" ? (
                 <>
-                    <p className="field-label">{label}: <span>{value ?? "-"}</span></p>
+                    <p className="field-label">{
+                        labelRequired &&
+                        <span>{label}: </span>
+                    }
+                        <span>{value ?? "-"}</span>
+                    </p>
                 </>
             ) : (
                 <>

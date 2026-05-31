@@ -13,6 +13,12 @@
  *         schema:
  *           type: integer
  *         description: ID завода
+ * 
+ *       - in: query
+ *         name: not_factory_id
+ *         schema:
+ *           type: integer
+ *         description: ID завода, из которого НЕ нужно брать продукты
  *
  *       - in: query
  *         name: sort

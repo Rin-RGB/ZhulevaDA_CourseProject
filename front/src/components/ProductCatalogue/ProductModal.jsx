@@ -139,6 +139,9 @@ export default function ProductModal({
         };
         await onSubmit(productData, selectedFactories);
     }
+    async function handleDelete(){
+        await onDelete(productId);
+    }
 
     if (
         !open ||
@@ -175,6 +178,7 @@ export default function ProductModal({
                                 value={form.name}
                                 onChange={handleChange}
                                 mode={modalMode}
+                                labelRequired={false}
                             />
 
                             <FormField
@@ -268,7 +272,7 @@ export default function ProductModal({
                                         </button>
 
                                         <button
-                                            onClick={onDelete}
+                                            onClick={handleDelete}
                                         >
                                             Удалить
                                         </button>

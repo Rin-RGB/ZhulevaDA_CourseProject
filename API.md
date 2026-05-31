@@ -356,14 +356,32 @@
         "name": "Завод №1",
         "address": "ул. Хлебная, 1",
         "total_value": 8000.00,
-        "volume": 15 
+        "volume": 15,
+        "managers":
+            [
+              {
+                "id": 1,
+                "name": "Анна",
+                "last_name": "Королёва",
+                "role": "CEO"
+              }
+            ]
     },
     { 
         "id": 2, 
         "name": "Завод №2", 
         "address": "ул. Пекарная, 5", 
         "total_value": 5000.00, 
-        "volume": 8  
+        "volume": 8,
+        "managers":
+            [
+              {
+                "id": 1,
+                "name": "Анна",
+                "last_name": "Королёва",
+                "role": "CEO"
+              }
+            ]
     }
 ]
 ```
