@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { api } from "../../api/index";
 
@@ -24,6 +24,7 @@ export default function ProductModal({
 
     const [selectedFactories, setSelectedFactories] = useState([]);
     const [allFactories, setAllFactories] = useState([]);
+
     const [profit, setProfit] = useState("");
 
     const [form, setForm] = useState({
@@ -33,8 +34,11 @@ export default function ProductModal({
         expiration_days: ""
     });
 
-    function resetForm() {
+    const selectedFactoryIds = useMemo(() => {
+        return selectedFactories.map(f => f.id);
+    }, [selectedFactories]);
 
+    function resetForm() {
         setForm({
             name: "",
             price: "",
@@ -48,17 +52,13 @@ export default function ProductModal({
     }
 
     async function initProduct() {
-
         if (productId == null) {
             resetForm();
             return;
         }
 
-        const currentProduct =
-            await api.getProductById(productId);
-
-        const productIngredients =
-            await api.getProductIngredients(productId);
+        const currentProduct = await api.getProductById(productId);
+        const productIngredients = await api.getProductIngredients(productId);
 
         setForm({
             name: currentProduct.name,
@@ -66,22 +66,21 @@ export default function ProductModal({
             weight: currentProduct.weight,
             expiration_days: currentProduct.expiration_days
         });
+
         setProfit(currentProduct.profit);
 
         setSelectedFactories(
-            currentProduct.factories || []
+            (currentProduct.factories || []).map(f =>
+                typeof f === "object" ? f : { id: f }
+            )
         );
 
         setIngredients(productIngredients || []);
     }
 
     async function loadData() {
-
-        const ingredients =
-            await api.getIngredients();
-
-        const factories =
-            await api.getFactories();
+        const ingredients = await api.getIngredients();
+        const factories = await api.getFactories();
 
         setAllIngredients(ingredients || []);
         setAllFactories(factories || []);
@@ -90,28 +89,20 @@ export default function ProductModal({
     useEffect(() => {
 
         async function loadModal() {
-
             setLoading(true);
 
             try {
-
                 await loadData();
 
-                if (
-                    modalMode === "read" ||
-                    modalMode === "edit"
-                ) {
+                if (modalMode === "read" || modalMode === "edit") {
                     await initProduct();
                 } else {
                     resetForm();
                 }
 
             } catch (err) {
-
                 console.error(err);
-
             } finally {
-
                 setLoading(false);
             }
         }
@@ -122,8 +113,11 @@ export default function ProductModal({
 
     }, [open, productId, modalMode]);
 
-    function handleChange(field, value) {
+    if (loading) {
+        return <h2>Загрузка...</h2>;
+    }
 
+    function handleChange(field, value) {
         setForm(prev => ({
             ...prev,
             [field]: value
@@ -131,158 +125,110 @@ export default function ProductModal({
     }
 
     async function handleSubmit() {
-        
+
         const productData = {
             id: productId,
             ...form,
             ingredients
         };
-        await onSubmit(productData, selectedFactories);
+
+        await onSubmit(productData, selectedFactoryIds);
     }
-    async function handleDelete(){
+
+    async function handleDelete() {
         await onDelete(productId);
     }
 
     if (
         !open ||
-        (
-            (modalMode === "read" ||
-                modalMode === "edit")
-            &&
-            productId == null
-        )
+        ((modalMode === "read" || modalMode === "edit") && productId == null)
     ) {
         return null;
     }
 
     return (
-        <div
-            onClick={(e) =>
-                e.stopPropagation()
-            }
-        >
+        <div onClick={(e) => e.stopPropagation()}>
 
-            <button onClick={onClose}>
-                ✕
-            </button>
+            <button onClick={onClose}>✕</button>
 
-            {
-                loading
-                    ? <h1>Загрузка...</h1>
-                    : (
-                        <div>
+            <FormField
+                label="Имя"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                mode={modalMode}
+            />
 
-                            <FormField
-                                label="Имя"
-                                name="name"
-                                value={form.name}
-                                onChange={handleChange}
-                                mode={modalMode}
-                                labelRequired={false}
-                            />
+            <FormField
+                label="Цена"
+                name="price"
+                value={form.price}
+                onChange={handleChange}
+                mode={modalMode}
+            />
 
-                            <FormField
-                                label="Цена"
-                                name="price"
-                                value={form.price}
-                                onChange={handleChange}
-                                mode={modalMode}
-                            />
+            <FormField
+                label="Вес"
+                name="weight"
+                value={form.weight}
+                onChange={handleChange}
+                mode={modalMode}
+            />
 
-                            <FormField
-                                label="Вес"
-                                name="weight"
-                                value={form.weight}
-                                onChange={handleChange}
-                                mode={modalMode}
-                            />
+            <FormField
+                label="Срок годности"
+                name="expiration_days"
+                value={form.expiration_days}
+                onChange={handleChange}
+                mode={modalMode}
+            />
 
-                            <FormField
-                                label="Срок годности"
-                                name="expiration_days"
-                                value={form.expiration_days}
-                                onChange={handleChange}
-                                mode={modalMode}
-                            />
-                            {modalMode === 'read' &&
-                                <p>Прибыль: <span>{form.profit}</span></p>
-                            }
+            {modalMode === "read" && (
+                <p>Прибыль: <span>{profit}</span></p>
+            )}
 
-                            <h3>
-                                Ингредиенты
-                            </h3>
+            <h3>Ингредиенты</h3>
 
-                            <IngredientsSection
-                                ingredients={ingredients}
-                                setIngredients={setIngredients}
-                                allIngredients={allIngredients}
-                                mode={modalMode}
-                            />
+            <IngredientsSection
+                ingredients={ingredients}
+                setIngredients={setIngredients}
+                allIngredients={allIngredients}
+                mode={modalMode}
+            />
 
-                            <h3>
-                                Заводы
-                            </h3>
+            <h3>Заводы</h3>
 
-                            <FactoriesSection
-                                mode={modalMode}
-                                allFactories={allFactories}
-                                selectedFactories={selectedFactories}
-                                setSelectedFactories={
-                                    setSelectedFactories
-                                }
-                            />
+            <FactoriesSection
+                mode={modalMode}
+                allFactories={allFactories}
+                selectedFactories={selectedFactories}
+                setSelectedFactories={setSelectedFactories}
+            />
 
-                            {
-                                (
-                                    modalMode === "edit" ||
-                                    modalMode === "create"
-                                ) && (
-                                    <>
-                                        <button
-                                            onClick={() => {
+            {(modalMode === "edit" || modalMode === "create") && (
+                <>
+                    <button onClick={() => {
+                        if (modalMode === "create") {
+                            onClose();
+                        } else {
+                            onRead();
+                        }
+                    }}>
+                        Отменить
+                    </button>
 
-                                                if (
-                                                    modalMode === "create"
-                                                ) {
-                                                    onClose();
-                                                } else {
-                                                    onRead();
-                                                }
-                                            }}
-                                        >
-                                            Отменить
-                                        </button>
+                    <button onClick={handleSubmit}>
+                        Сохранить
+                    </button>
+                </>
+            )}
 
-                                        <button
-                                            onClick={handleSubmit}
-                                        >
-                                            Сохранить
-                                        </button>
-                                    </>
-                                )
-                            }
-
-                            {
-                                modalMode === "read" && (
-                                    <>
-                                        <button
-                                            onClick={onEdit}
-                                        >
-                                            Редактировать
-                                        </button>
-
-                                        <button
-                                            onClick={handleDelete}
-                                        >
-                                            Удалить
-                                        </button>
-                                    </>
-                                )
-                            }
-
-                        </div>
-                    )
-            }
+            {modalMode === "read" && (
+                <>
+                    <button onClick={onEdit}>Редактировать</button>
+                    <button onClick={handleDelete}>Удалить</button>
+                </>
+            )}
 
         </div>
     );

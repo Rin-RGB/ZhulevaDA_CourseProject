@@ -5,65 +5,63 @@ export default function FactoriesSection({
     setSelectedFactories,
 }) {
 
-    if (mode !== 'edit' && mode !== 'create') {
-        return (
-            selectedFactories.length > 0 ?
-            < ul >
-                {
-                    selectedFactories.map(factory => (
-                        <li key={factory.id}>
-                            {`${factory.name} : произведено ${factory.total_produced} шт.`}
-                        </li>
-                    ))
-                }
-            </ul> 
-            :
+    const selectedIds = new Set(selectedFactories.map(f => f.id));
+
+    if (mode !== "edit" && mode !== "create") {
+        return selectedFactories.length > 0 ? (
+            <ul>
+                {selectedFactories.map(factory => (
+                    <li key={factory.id}>
+                        {factory.name
+                            ? `${factory.name} : произведено ${factory.total_produced} шт.`
+                            : `Factory ID ${factory.id}`}
+                    </li>
+                ))}
+            </ul>
+        ) : (
             <p>Не добавлено ни на один завод</p>
         );
     }
 
     return (
         <div>
-            {
-                allFactories.map(factory => (
+            {allFactories.map(factory => {
+
+                const isChecked = selectedIds.has(factory.id);
+
+                return (
                     <label
                         key={factory.id}
-                        style={{
-                            display: "block",
-                        }}
+                        style={{ display: "block" }}
                     >
                         <input
                             type="checkbox"
-
-                            checked={
-                                selectedFactories.includes(
-                                    factory.id
-                                )
-                            }
-
+                            checked={isChecked}
                             onChange={(e) => {
+                                const checked = e.target.checked;
 
-                                if (e.target.checked) {
-                                    setSelectedFactories([
-                                        ...selectedFactories,
-                                        factory.id
-                                    ]);
+                                setSelectedFactories(prev => {
 
-                                    return;
-                                }
+                                    if (checked) {
+                                        // избегаем дублей
+                                        if (prev.some(f => f.id === factory.id)) {
+                                            return prev;
+                                        }
 
-                                setSelectedFactories(
-                                    selectedFactories.filter(
-                                        id => id !== factory.id
-                                    )
-                                );
+                                        return [...prev, factory]; 
+                                    }
+
+                                    return prev.filter(
+                                        f => f.id !== factory.id
+                                    );
+                                });
                             }}
                         />
 
                         {factory.name}
                     </label>
-                ))
-            }
+                );
+            })}
         </div>
     );
 }

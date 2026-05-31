@@ -4,7 +4,7 @@ import Header from "./components/layout/Header";
 
 import ProductCatalogue from "./pages/ProductCatalogue";
 import FactoriesPage from "./pages/FactoriesPage";
-import EmployeesPage from "./pages/EmployeesPage";
+import WorkersPage from "./pages/WorkersPage";
 import BatchesPage from "./pages/BatchesPage";
 import LoginPage from "./pages/LoginPage";
 import MainLayout from "./components/layout/MainLayout";
@@ -19,7 +19,7 @@ export default function App() {
                 <Route element={<MainLayout />}>
                     <Route path="/" element={<ProductCatalogue />} />
                     <Route path="/factories" element={<FactoriesPage />} />
-                    <Route path="/employees" element={<EmployeesPage />} />
+                    <Route path="/employees" element={<WorkersPage />} />
                     <Route path="/batches" element={<BatchesPage />} />
                     <Route path="/factory/:id" element={<FactoryPage />} />
                 </Route>

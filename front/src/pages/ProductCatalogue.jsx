@@ -12,6 +12,7 @@ import ProductRow
 export default function ProductCatalogue() {
 
     const [products, setProducts] = useState([]);
+    const [summary, setSummary] = useState(0);
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState("profit");
@@ -43,6 +44,7 @@ export default function ProductCatalogue() {
             const pagination = data.pagination;
 
             setProducts(data.products);
+            setSummary(data.summary);
 
             setPageInfo({
                 total: pagination.total,
@@ -127,24 +129,37 @@ export default function ProductCatalogue() {
         setModalMode("create");
         setModalOpen(true);
     }
-    const onSubmit = async (product, factories) => {
-        const factoriesData = factories.map(id => ({
-            id
-        }));
-        if (modalMode === 'edit') {
+    const onSubmit = async (product, factoryIds) => {
+
+        const factoriesData = factoryIds.map(id => ({ id }));
+
+        const isEdit = modalMode === "edit";
+        const isCreate = modalMode === "create";
+
+        if (isEdit) {
+
             await api.updateProduct(product.id, product);
+
             await api.updateProductFactories(product.id, factoriesData);
-            loadProducts();
-            setModalMode('read');
-        } else if (modalMode === 'create') {
-            const productData = product;
-            productData.factories = factoriesData;
-            const createdProduct = await api.createProduct(product);
-            loadProducts();
-            setSelectedProduct(createdProduct);
-            setModalMode('read');
+
+            await loadProducts();
+            setModalMode("read");
+
+            return;
         }
-    }
+
+        if (isCreate) {
+
+            const createdProduct = await api.createProduct({
+                ...product,
+                factories: factoriesData
+            });
+
+            await loadProducts();
+            setSelectedProduct(createdProduct);
+            setModalMode("read");
+        }
+    };
 
     return (
         <div>
@@ -221,6 +236,7 @@ export default function ProductCatalogue() {
             {
                 products.length !== 0 ?
                     <>
+                        <p>Сумма изделий: {summary}</p>
                         <table border="1" cellPadding="10">
                             <thead>
                                 <tr>

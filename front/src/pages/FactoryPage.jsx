@@ -121,6 +121,7 @@ export default function FactoryPage() {
             await api.addProductToFactory(id, productId);
         }
         loadProducts();
+        loadFactory();
         setModalOpen(false);
         window.alert('Изделия добавлены')
     }

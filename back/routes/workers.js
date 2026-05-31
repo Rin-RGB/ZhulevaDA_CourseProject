@@ -92,55 +92,33 @@ async function elementExists(table, id) {
         WHERE id = ?
     `, [id]);
 }
-
 router.get('/', async (req, res) => {
 
     try {
 
-        const {
-            role,
-            search
-        } = req.query;
+        const { role, search } = req.query;
 
         let limit = checkPositiveNumber(req.query.limit);
         let offset = checkNonNegativeNumber(req.query.offset);
         let factoryId = req.query.factory_id;
 
-        if (limit === null) { limit = 10 };
-        if (offset === null) { offset = 0 };
+        if (limit === null) limit = 10;
+        if (offset === null) offset = 0;
 
-        let sql = `
-            SELECT DISTINCT
-
-                w.id,
-                w.email,
-                w.name,
-                w.last_name,
-                w.is_authorized
-
-            FROM workers w
-
-            LEFT JOIN factory_worker fw
-                ON fw.worker_id = w.id
-
-            WHERE 1 = 1
-        `;
-
+        let whereSql = `WHERE 1=1`;
         const params = [];
 
-        if (
-            typeof search === 'string' &&
-            search.trim()
-        ) {
-            sql += `
-                AND (
-                TRIM(w.last_name) || ' ' || TRIM(w.name) LIKE ? COLLATE NOCASE
-                OR
-                TRIM(w.name) || ' ' || TRIM(w.last_name) LIKE ? COLLATE NOCASE
-                )
-            `;
+        if (typeof search === "string" && search.trim()) {
 
             const normalizedSearch = search.trim();
+
+            whereSql += `
+                AND (
+                    TRIM(w.last_name) || ' ' || TRIM(w.name) LIKE ? COLLATE NOCASE
+                    OR
+                    TRIM(w.name) || ' ' || TRIM(w.last_name) LIKE ? COLLATE NOCASE
+                )
+            `;
 
             params.push(
                 `%${normalizedSearch}%`,
@@ -149,57 +127,66 @@ router.get('/', async (req, res) => {
         }
 
         if (factoryId !== undefined) {
+
             factoryId = checkId(factoryId);
+
             if (factoryId !== null) {
-                const factoryExists = await elementExists(
-                    'factories',
-                    factoryId
-                );
+
+                const factoryExists = await elementExists('factories', factoryId);
+
                 if (factoryExists) {
-                    sql += `
-                        AND fw.factory_id = ?
-                    `;
+                    whereSql += ` AND fw.factory_id = ? `;
                     params.push(factoryId);
                 }
             }
         }
 
-        if (typeof role === 'string') {
+        if (typeof role === "string") {
+
             const normalizedRole = role.trim().toLowerCase();
+
             if (validRoles.includes(normalizedRole)) {
-                sql += `
-                    AND LOWER(TRIM(fw.role)) = ?
-                `;
+                whereSql += ` AND TRIM(fw.role) = ? `;
                 params.push(normalizedRole);
             }
         }
 
-        sql += `
-            ORDER BY LOWER(TRIM(w.last_name)), LOWER(TRIM(w.name))
+        const sql = `
+            SELECT DISTINCT
+                w.id,
+                w.email,
+                w.name,
+                w.last_name,
+                w.is_authorized
+            FROM workers w
+            LEFT JOIN factory_worker fw
+                ON fw.worker_id = w.id
+            ${whereSql}
+            ORDER BY TRIM(w.last_name), TRIM(w.name)
             LIMIT ? OFFSET ?
         `;
 
-        params.push(limit, offset);
+        const workersParams = [...params, limit, offset];
 
-        const workers = await query(sql, params);
+        const workers = await query(sql, workersParams);
 
         for (const worker of workers) {
 
             const factories = await query(`
                 SELECT
-
-                    fw.factory_id,
+                    fw.factory_id as id,
+                    f.name,
                     fw.role
 
                 FROM factory_worker fw
-
+                JOIN factories f
+                    ON f.id = fw.factory_id
                 WHERE fw.worker_id = ?
             `, [worker.id]);
 
-            let highestRole = 'worker';
+            let highestRole = "worker";
 
             for (const f of factories) {
-
                 if (
                     rolesPriority[f.role] &&
                     rolesPriority[f.role] > rolesPriority[highestRole]
@@ -212,14 +199,33 @@ router.get('/', async (req, res) => {
             worker.factories = factories;
         }
 
-        res.json(workers);
+        const countSql = `
+            SELECT COUNT(DISTINCT w.id) AS total
+            FROM workers w
+            LEFT JOIN factory_worker fw
+                ON fw.worker_id = w.id
+            ${whereSql}
+        `;
+
+        const countParams = [...params];
+
+        const total = await queryOne(countSql, countParams);
+
+        res.json({
+            workers,
+            pagination: {
+                total: total.total,
+                limit,
+                offset
+            }
+        });
 
     } catch (err) {
 
         console.error(err);
 
         res.status(500).json({
-            error: 'Ошибка получения сотрудников'
+            error: "Ошибка получения сотрудников"
         });
     }
 });
@@ -261,12 +267,15 @@ router.get('/:id', async (req, res) => {
         const factories = await query(`
             SELECT
 
-                factory_id,
-                role
+                fw.factory_id as id,
+                f.name,
+                fw.role
 
-            FROM factory_worker
+            FROM factory_worker fw
+            JOIN factories f
+                ON f.id = fw.factory_id
 
-            WHERE worker_id = ?
+            WHERE fw.worker_id = ?
         `, [workerId]);
 
         let highestRole = 'worker';

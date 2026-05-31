@@ -16,7 +16,7 @@ export default function FactoryModal({
     const handleSubmit = async () => {
         await onSubmit(form);
     };
-    
+
     function handleChange(field, value) {
 
         setForm(prev => ({
@@ -26,7 +26,11 @@ export default function FactoryModal({
     };
 
     return (
-        <div>
+        <div
+            onClick={(e) =>
+                e.stopPropagation()
+            }
+        >
             <button onClick={onClose}>
                 ✕
             </button>

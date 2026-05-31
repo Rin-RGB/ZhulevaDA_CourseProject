@@ -15,6 +15,9 @@
  *       properties:
  *         id:
  *           type: integer
+ * 
+ *         name:
+ *           type: string
  *
  *         role:
  *           $ref: '#/components/schemas/FactoryRole'
@@ -94,9 +97,30 @@
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Worker'
+ *               type: object
+ *
+ *               properties:
+ *
+ *                 workers:
+ *                   type: array
+ *
+ *                   items:
+ *                     allOf:
+ *                       - $ref: '#/components/schemas/Worker'
+ *
+ *                 pagination:
+ *                   type: object
+ *
+ *                   properties:
+ *
+ *                     total:
+ *                       type: integer
+ *
+ *                     limit:
+ *                       type: integer
+ *
+ *                     offset:
+ *                       type: integer
  */
 
 

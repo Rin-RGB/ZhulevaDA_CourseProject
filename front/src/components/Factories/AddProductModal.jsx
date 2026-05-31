@@ -72,7 +72,11 @@ export default function AddProductModal({
         );
     }
     return (
-        <div>
+        <div
+            onClick={(e) =>
+                e.stopPropagation()
+            }
+        >
             <button onClick={onClose}>
                 ✕
             </button>
