@@ -10,7 +10,7 @@ const {
 } = require('../middleware/auth');
 
 // Регистрация пользователя
-router.post('/register-user', async (req, res) => {
+router.post('/register', async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -48,7 +48,7 @@ router.post('/register-user', async (req, res) => {
         // Обновляем пользователя
         await runQuery(`
             UPDATE workers 
-            SET hashed_password = ?, authorized = 1 
+            SET hashed_password = ?, is_authorized = 1 
             WHERE email = ?
         `, [hashedPassword, email]);
 
@@ -78,7 +78,7 @@ router.post('/login', async (req, res) => {
 
         // Ищем пользователя
         const user = await queryOne(`
-            SELECT id, email, name, last_name, hashed_password, authorized
+            SELECT id, email, name, last_name, hashed_password, is_authorized
             FROM workers 
             WHERE email = ?
         `, [email]);
@@ -137,7 +137,7 @@ router.post('/refresh', async (req, res) => {
 
         // Проверяем, существует ли пользователь
         const user = await queryOne(`
-            SELECT id FROM workers WHERE id = ? AND authorized = 1
+            SELECT id FROM workers WHERE id = ? AND is_authorized = 1
         `, [decoded.userId]);
 
         if (!user) {

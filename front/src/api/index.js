@@ -9,7 +9,149 @@ const apiClient = axios.create({
     withCredentials: true,
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+
+let logoutCallback = null;
+export const setLogoutCallback = (callback) => {
+    logoutCallback = callback;
+};
+
+apiClient.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+            config.headers["Authorization"] = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+apiClient.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 404 &&
+            error.config?.url?.includes('/auth/me')) {
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login';
+            return Promise.reject(error);
+        }
+        if (error.response?.status !== 401 || originalRequest._retry) {
+            return Promise.reject(error);
+        }
+        if (
+            originalRequest.url?.includes('/auth/refresh') ||
+            originalRequest.url?.includes('/auth/login')
+        ) {
+            return Promise.reject(error);
+        }
+
+        if (isRefreshing) {
+            return new Promise((resolve, reject) => {
+                failedQueue.push({ resolve, reject });
+            }).then(token => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                return apiClient(originalRequest);
+            }).catch(err => Promise.reject(err));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+
+
+        try {
+            const response = await apiClient.post('/auth/refresh');
+            const newAccessToken = response.data.accessToken;
+
+            localStorage.setItem('accessToken', newAccessToken);
+
+            processQueue(null, newAccessToken);
+
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            return apiClient(originalRequest);
+
+        } catch (refreshError) {
+            processQueue(refreshError, null);
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login';
+            return Promise.reject(refreshError);
+        } finally {
+            isRefreshing = false;
+        }
+    }
+);
+
+
+export const auth = {
+    // Регистрация пользователя
+
+};
+
 export const api = {
+
+    login: async (email, password) => {
+        const response = await apiClient.post("/auth/login", { email, password });
+        const { accessToken } = response.data;
+        if (accessToken) {
+            localStorage.setItem('accessToken', accessToken);
+        }
+        return response.data;
+    },
+
+    register: async (email, password) => {
+        const response = await apiClient.post("/auth/register", { email, password });
+        return response.data;
+    },
+
+    refresh: async () => {
+        const response = await apiClient.post("/auth/refresh");
+        const { accessToken } = response.data;
+        if (accessToken) {
+            localStorage.setItem('accessToken', accessToken);
+        }
+        return response.data;
+    },
+
+    logout: async () => {
+        try {
+            const response = await apiClient.post("/auth/logout");
+            localStorage.removeItem('accessToken');
+            return response.data;
+        } catch (e) {
+            localStorage.removeItem('accessToken');
+            throw e;
+        }
+    },
+
+    getMe: async () => {
+        const response = await apiClient.get("/auth/me");
+        return response.data;
+    },
+
+    isAuthenticated: () => {
+        return !!localStorage.getItem('accessToken');
+    },
+    
     // PRODUCTS
 
     getProducts: async (params = {}) => {

@@ -46,6 +46,49 @@
  *         volume:
  *           type: integer
  * 
+ *     Error:
+ *       type: object
+ *       properties:
+ *         error:
+ *           type: string
+ *           description: Сообщение об ошибке
+ *           example: "Описание ошибки"
+ * 
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 2
+ *         email:
+ *           type: string
+ *           example: "worker@bakery.com"
+ *         name:
+ *           type: string
+ *           example: "Иван"
+ *         last_name:
+ *           type: string
+ *           example: "Петров"
+ *         factories:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               factory_id:
+ *                 type: integer
+ *                 example: 1
+ *               name:
+ *                 type: string
+ *                 example: "Хлебозавод №1"
+ *               role:
+ *                 type: string
+ *                 enum: [manager, worker]
+ *                 example: "manager"
+ *         role:
+ *           type: string
+ *           enum: [manager, worker]
+ *           example: "manager"
+ * 
  *     FactoryDetails:
  *       allOf:
  *         - $ref: '#/components/schemas/Factory'

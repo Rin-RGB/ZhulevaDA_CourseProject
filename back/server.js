@@ -1,5 +1,6 @@
 const express = require('express');
 const { initDatabase, runQuery, query, queryOne } = require('./db/database');
+const cookieParser = require('cookie-parser')
 const { seedDatabase } = require('./db/seed');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
@@ -40,11 +41,11 @@ app.use('/api/ingredients', ingredientsRouter);
 const batchesRouter = require('./routes/batches');
 app.use('/api/batches', batchesRouter);
 
-// const authRouter = require('./routes/auth');
-// app.use('/auth', authRouter);
+const authRouter = require('./routes/auth');
+app.use('/api/auth', authRouter);
 
-// const meRouter = require('./routes/me');
-// app.use('/me', meRouter);
+const meRouter = require('./routes/me');
+app.use('/api/me', meRouter);
 
 
 async function initAndSeed() {

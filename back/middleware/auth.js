@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { queryOne } = require('../db/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
@@ -35,10 +36,10 @@ function verifyRefreshToken(token) {
     }
 }
 
-// Middleware для проверки access токена
-function authenticateToken(req, res, next) {
+// Middleware: проверяет токен и загружает пользователя
+async function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
         return res.status(401).json({ error: 'Токен не предоставлен' });
@@ -51,6 +52,19 @@ function authenticateToken(req, res, next) {
     }
 
     req.userId = decoded.userId;
+    
+    // Загружаем базовую информацию о пользователе
+    const user = await queryOne(`
+        SELECT id, email, name, last_name, is_authorized
+        FROM workers 
+        WHERE id = ?
+    `, [req.userId]);
+    
+    if (!user || !user.is_authorized) {
+        return res.status(403).json({ error: 'Пользователь не авторизован' });
+    }
+    
+    req.user = user;
     next();
 }
 
