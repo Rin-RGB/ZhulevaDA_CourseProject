@@ -6,7 +6,6 @@
  */
 
 
-
 /**
  * @swagger
  * /api/batches:
@@ -18,32 +17,34 @@
  *
  *     parameters:
  *       - in: query
- *         name: factory_id
+ *         name: fresh
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - fresh
+ *             - all
+ *         description: Фильтр по свежести
  *
+ *       - in: query
+ *         name: factory_id
  *         schema:
  *           type: integer
- *
  *         description: ID завода
  *
  *       - in: query
  *         name: product_id
- *
  *         schema:
  *           type: integer
- *
  *         description: ID изделия
- * 
- * 
+ *
  *       - in: query
  *         name: limit
- *
  *         schema:
  *           type: integer
  *           default: 10
  *
  *       - in: query
  *         name: offset
- *
  *         schema:
  *           type: integer
  *           default: 0
@@ -51,16 +52,26 @@
  *     responses:
  *       200:
  *         description: Список партий
- *
  *         content:
  *           application/json:
  *             schema:
- *               type: array
+ *               type: object
+ *               properties:
+ *                 batches:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductBatch'
  *
- *               items:
- *                 $ref: '#/components/schemas/ProductBatch'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
  */
-
 
 
 /**
@@ -76,14 +87,12 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *
  *     responses:
  *       200:
  *         description: Информация о партии
- *
  *         content:
  *           application/json:
  *             schema:
@@ -92,7 +101,6 @@
  *       404:
  *         description: Партия не найдена
  */
-
 
 
 /**
@@ -106,35 +114,32 @@
  *
  *     requestBody:
  *       required: true
- *
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *
  *             properties:
  *               product_id:
  *                 type: integer
- *
  *               factory_id:
  *                 type: integer
- *
  *               amount:
  *                 type: integer
  *
  *     responses:
  *       201:
  *         description: Партия создана
- *
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ProductBatch'
  *
+ *       400:
+ *         description: Некорректные данные
+ *
  *       404:
  *         description: Продукт или завод не найден
  */
-
 
 
 /**
@@ -150,7 +155,6 @@
  *       - in: path
  *         name: id
  *         required: true
- *
  *         schema:
  *           type: integer
  *

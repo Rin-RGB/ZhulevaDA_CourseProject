@@ -15,6 +15,29 @@
  *       - Ingredients
  *
  *     summary: Получить список ингредиентов
+ * 
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         description: Количество записей
+ *
+ *         schema:
+ *           type: integer
+ *
+ *       - in: query
+ *         name: offset
+ *         required: false
+ *         description: Смещение
+ * 
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         description: поиск
+ *
+ *         schema:
+ *           type: string
+ 
  *
  *     responses:
  *       200:
@@ -27,6 +50,17 @@
  *
  *               items:
  *                 $ref: '#/components/schemas/Ingredient'
+ * 
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *
  */
 
 
@@ -221,6 +255,15 @@
  *
  *     parameters:
  *       - in: query
+ *         name: fresh
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - fresh
+ *             - all
+ *         description: Фильтр по свежести
+ * 
+ *       - in: query
  *         name: factory_id
  *         required: false
  *         description: ID завода
@@ -263,6 +306,16 @@
  *
  *               items:
  *                 $ref: '#/components/schemas/IngredientBatch'
+ * 
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
  *
  *       400:
  *         description: Некорректные query параметры

@@ -162,6 +162,53 @@ export const api = {
         const response = await apiClient.delete(`/ingredients/${id}`);
         return response.data;
     },
+    // Поставки ингредиентов
+    getIngredientBatches: async (params = {}) => {
+        const response = await apiClient.get("/ingredients/batches", {
+            params,
+        });
+        return response.data;
+    },
+
+    getIngredientBatchById: async (id) => {
+        const response = await apiClient.get(`/ingredients/batch/${id}`);
+        return response.data;
+    },
+
+    createIngredientBatch: async (data) => {
+        const response = await apiClient.post("/ingredients/batches", data);
+        return response.data;
+    },
+
+    deleteIngredientBatch: async (id) => {
+        const response = await apiClient.delete(`/ingredients/batches/${id}`);
+        return response.data;
+    },
+
+    // BATCHES
+
+    getBatches: async (params = {}) => {
+        const response = await apiClient.get("/batches", {
+            params,
+        });
+        return response.data;
+    },
+
+    getBatchById: async (id) => {
+        const response = await apiClient.get(`/batch/${id}`);
+        return response.data;
+    },
+
+    createBatch: async (data) => {
+        const response = await apiClient.post("/batches", data);
+        return response.data;
+    },
+
+    deleteBatch: async (id) => {
+        const response = await apiClient.delete(`/batches/${id}`);
+        return response.data;
+    },
+
 };
 
 export default apiClient;

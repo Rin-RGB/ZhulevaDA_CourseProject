@@ -9,52 +9,120 @@ const {
 } = require('../db/database');
 
 
-
-async function elementOr404(table, id, res) {
-
-    const allowedTables = [
-        'batch_product',
-        'products',
-        'factory'
-    ];
-
-    if (!allowedTables.includes(table)) {
-
+function checkNumber(num) {
+    if (
+        num === undefined ||
+        num === null ||
+        (typeof num === 'string' && num.trim() === '')
+    ) {
         return null;
     }
 
-    const element = await queryOne(`
+    const value = Number(num);
+
+    if (Number.isNaN(value)) {
+        return null;
+    }
+
+    return value;
+}
+function checkPositiveNumber(num) {
+    num = checkNumber(num);
+    if (num !== null && num > 0) {
+        return num;
+    }
+    return null;
+}
+
+function checkNonNegativeNumber(num) {
+    const checkedNum = checkNumber(num);
+
+    if (checkedNum !== null && checkedNum >= 0) {
+        return checkedNum;
+    }
+
+    return null;
+}
+
+function checkId(id) {
+    const checkedId = checkNumber(id);
+    if (
+        checkedId === null ||
+        !Number.isInteger(checkedId) ||
+        checkedId < 1
+    ) {
+        return null;
+    }
+    return checkedId;
+}
+
+async function elementExists(table, id) {
+    const allowedTables = [
+        'batch_product',
+        'factories',
+        'products',
+        'ingredients'
+    ];
+
+    if (!allowedTables.includes(table)) {
+        const err = new Error('Неверное название таблицы');
+        err.status = 400;
+        throw err;
+    }
+
+    return await queryOne(`
         SELECT id
         FROM ${table}
         WHERE id = ?
     `, [id]);
-
-    if (!element) {
-
-        res.status(404).json({
-            error: 'Элемент не найден'
-        });
-
-        return null;
-    }
-
-    return element;
 }
-
 
 
 router.get('/', async (req, res) => {
 
     try {
+        let factoryId = checkId(req.query.factory_id);
+        let productId = checkId(req.query.product_id);
 
-        const {
-            factory_id,
-            product_id,
-            limit = 10,
-            offset = 0
-        } = req.query;
+        let fresh = req.query.fresh;
 
+        let limit = checkPositiveNumber(req.query.limit);
+        let offset = checkNonNegativeNumber(req.query.offset);
+
+        if (limit === null) limit = 10;
+        if (offset === null) offset = 0;
+
+        let whereSql = `WHERE 1=1`;
         const params = [];
+
+        if (factoryId !== undefined) {
+            factoryId = checkId(factoryId);
+
+            if (factoryId !== null) {
+                const exists = await elementExists('factories', factoryId);
+
+                if (exists) {
+                    whereSql += ` AND bp.factory_id = ? `;
+                    params.push(factoryId);
+                }
+            }
+        }
+
+        if (productId !== undefined) {
+            productId = checkId(productId);
+
+            if (productId !== null) {
+                const exists = await elementExists('products', productId);
+
+                if (exists) {
+                    whereSql += ` AND bp.product_id = ? `;
+                    params.push(productId);
+                }
+            }
+        }
+        if (fresh === 'fresh') {
+            whereSql += ` AND bp.expiry_date > DATE('now') `;
+        }
 
         let sql = `
             SELECT
@@ -70,8 +138,7 @@ router.get('/', async (req, res) => {
 
                 bp.production_date,
 
-                bp.expiry_date
-                    AS expiration_date,
+                bp.expiry_date,
 
                 bp.expiry_date > DATE('now')
                     AS is_fresh
@@ -81,59 +148,37 @@ router.get('/', async (req, res) => {
             LEFT JOIN products p
                 ON p.id = bp.product_id
 
-            LEFT JOIN factory f
+            LEFT JOIN factories f
                 ON f.id = bp.factory_id
 
-            WHERE 1 = 1
-        `;
-
-        if (factory_id) {
-
-            const exists = await elementOr404(
-                'factory',
-                factory_id,
-                res
-            );
-
-            if (!exists) return;
-
-            sql += `
-                AND bp.factory_id = ?
-            `;
-
-            params.push(factory_id);
-        }
-        if (product_id) {
-            const exists = await elementOr404(
-                'products',
-                product_id,
-                res
-            );
-
-            if (!exists) return;
-
-            sql += `
-                AND bp.product_id = ?
-            `;
-
-            params.push(product_id);
-        }
-
-        sql += `
-            ORDER BY bp.production_date DESC
+            ${whereSql}
+            ORDER BY is_fresh DESC, bp.production_date DESC
 
             LIMIT ?
             OFFSET ?
         `;
+        const batchesParams = [...params, limit, offset];
 
-        params.push(
-            Number(limit),
-            Number(offset)
-        );
+        const batches = await query(sql, batchesParams);
 
-        const batches = await query(sql, params);
+        const countSql = `
+            SELECT COUNT(DISTINCT bp.id) AS total
+            FROM batch_product bp
+            ${whereSql}
+        `;
 
-        return res.status(200).json(batches);
+        const countParams = [...params];
+
+        const total = await queryOne(countSql, countParams);
+
+        return res.status(200).json({
+            batches,
+            pagination: {
+                total: total.total,
+                limit,
+                offset
+            }
+        });
 
     } catch (err) {
 
@@ -151,15 +196,20 @@ router.get('/:id', async (req, res) => {
 
     try {
 
-        const id = req.params.id;
+        const id = checkId(req.params.id);
+        if (id === null) {
+            return res.status(400).json({ error: "Неверный id" })
+        }
 
-        const exists = await elementOr404(
+        const batchExists = await elementExists(
             'batch_product',
-            id,
-            res
+            id
         );
-
-        if (!exists) return;
+        if (!batchExists) {
+            return res.status(404).json({
+                error: 'Поставка не найдена'
+            });
+        }
 
         const batch = await queryOne(`
             SELECT
@@ -175,8 +225,7 @@ router.get('/:id', async (req, res) => {
 
                 bp.production_date,
 
-                bp.expiry_date
-                    AS expiration_date,
+                bp.expiry_date,
 
                 bp.expiry_date > DATE('now')
                     AS is_fresh
@@ -186,7 +235,7 @@ router.get('/:id', async (req, res) => {
             LEFT JOIN products p
                 ON p.id = bp.product_id
 
-            LEFT JOIN factory f
+            LEFT JOIN factories f
                 ON f.id = bp.factory_id
 
             WHERE bp.id = ?
@@ -204,45 +253,125 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-
-
 router.post('/', async (req, res) => {
+
+    const begin = () => runQuery(`BEGIN TRANSACTION`);
+    const commit = () => runQuery(`COMMIT`);
+    const rollback = () => runQuery(`ROLLBACK`);
 
     try {
 
-        const {
-            product_id,
-            factory_id,
-            amount
-        } = req.body;
+        let productId = checkId(req.body.product_id);
+        let factoryId = checkId(req.body.factory_id);
+        let amount = checkPositiveNumber(req.body.amount);
+
+        if (
+            productId === null ||
+            factoryId === null ||
+            amount === null
+        ) {
+            return res.status(400).json({ error: 'Некорректные данные' });
+        }
+
+        await begin();
 
         const product = await queryOne(`
-            SELECT
-                expiration_days
+            SELECT expiration_days
             FROM products
             WHERE id = ?
-        `, [product_id]);
+        `, [productId]);
 
         if (!product) {
+            await rollback();
+            return res.status(404).json({ error: 'Продукт не найден' });
+        }
 
-            return res.status(404).json({
-                error: 'Продукт не найден'
+        const factoryExists = await elementExists('factories', factoryId);
+
+        if (!factoryExists) {
+            await rollback();
+            return res.status(404).json({ error: 'Завод не найден' });
+        }
+        const relation = await queryOne(`
+            SELECT 1
+            FROM factory_product
+            WHERE factory_id = ?
+            AND product_id = ?
+            LIMIT 1
+        `, [factoryId, productId]);
+
+        if (!relation) {
+            await rollback?.();
+
+            return res.status(400).json({
+                error: 'Этот продукт нельзя производить на данном заводе'
             });
         }
 
-        const factory = await queryOne(`
-            SELECT id
-            FROM factory
-            WHERE id = ?
-        `, [factory_id]);
+        // 1. рецепт продукта
+        const recipe = await query(`
+            SELECT ingredient_id, quantity_kg
+            FROM recipes
+            WHERE product_id = ?
+        `, [productId]);
 
-        if (!factory) {
-
-            return res.status(404).json({
-                error: 'Завод не найден'
+        if (!recipe.length) {
+            await rollback();
+            return res.status(400).json({
+                error: 'У продукта нет рецепта'
             });
         }
 
+        // 2. проверка + списание ингредиентов (атомарно)
+        for (const r of recipe) {
+
+            const needed = r.quantity_kg * amount;
+
+            let remaining = needed;
+
+            const ingredient = await queryOne(`
+                SELECT
+                id, name
+                FROM ingredients
+                WHERE
+                id = ?
+            `, [r.ingredient_id]);
+
+            const batches = await query(`
+                SELECT id, delivery_kg
+                FROM batch_ingredient
+                WHERE factory_id = ?
+                AND ingredient_id = ?
+                AND expiry_date > DATE('now')
+                AND delivery_kg > 0
+                ORDER BY expiry_date ASC
+            `, [factoryId, r.ingredient_id]);
+
+            for (const b of batches) {
+
+                if (remaining <= 0) break;
+
+                const take = Math.min(b.delivery_kg, remaining);
+
+                await runQuery(`
+                    UPDATE batch_ingredient
+                    SET delivery_kg = delivery_kg - ?
+                    WHERE id = ?
+                `, [take, b.id]);
+
+                remaining -= take;
+            }
+
+            if (remaining > 0) {
+                await rollback();
+
+                return res.status(400).json({
+                    error: `Недостаточно ингредиента ${ingredient.name}`
+                });
+            }
+        }
+
+        // 3. создаём партию
         const result = await runQuery(`
             INSERT INTO batch_product (
                 product_id,
@@ -251,53 +380,37 @@ router.post('/', async (req, res) => {
                 production_date,
                 expiry_date
             )
-
             VALUES (
                 ?,
                 ?,
                 ?,
                 DATE('now'),
-
-                DATE(
-                    DATE('now'),
-                    '+' || ? || ' days'
-                )
+                DATE(DATE('now'), '+' || ? || ' days')
             )
         `, [
-            product_id,
-            factory_id,
+            productId,
+            factoryId,
             amount,
             product.expiration_days
         ]);
 
+        await commit();
+
+        // 4. возвращаем созданное
         const createdBatch = await queryOne(`
             SELECT
                 bp.id,
-
                 bp.product_id,
                 p.name AS product_name,
-
                 bp.factory_id,
                 f.name AS factory_name,
-
                 bp.amount,
-
                 bp.production_date,
-
-                bp.expiry_date
-                    AS expiration_date,
-
-                bp.expiry_date > DATE('now')
-                    AS is_fresh
-
+                bp.expiry_date,
+                bp.expiry_date > DATE('now') AS is_fresh
             FROM batch_product bp
-
-            LEFT JOIN products p
-                ON p.id = bp.product_id
-
-            LEFT JOIN factory f
-                ON f.id = bp.factory_id
-
+            LEFT JOIN products p ON p.id = bp.product_id
+            LEFT JOIN factories f ON f.id = bp.factory_id
             WHERE bp.id = ?
         `, [result.lastID]);
 
@@ -307,27 +420,31 @@ router.post('/', async (req, res) => {
 
         console.error(err);
 
+        try {
+            await runQuery(`ROLLBACK`);
+        } catch (_) { }
+
         return res.status(500).json({
             error: 'Ошибка создания партии'
         });
     }
 });
 
-
-
 router.delete('/:id', async (req, res) => {
 
     try {
 
-        const id = req.params.id;
+        const id = checkId(req.params.id);
 
-        const exists = await elementOr404(
+        const exists = await elementExists(
             'batch_product',
-            id,
-            res
+            id
         );
-
-        if (!exists) return;
+        if (!exists) {
+            return res.status(404).json({
+                error: 'Поставка не найдена'
+            });
+        }
 
         await runQuery(`
             DELETE FROM batch_product

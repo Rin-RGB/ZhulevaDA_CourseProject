@@ -4,7 +4,7 @@ export default function FormField({
     name,
     onChange,
     type = "text",
-    mode,
+    mode = 'create',
     labelRequired = true
 }) {
     return (

@@ -88,9 +88,6 @@ export default function WorkerModal({
         }
     }, [open, worker, modalMode]);
 
-    useEffect(() => {
-        console.log(form);
-    }, [form]);
     if (
         !open ||
         (modalMode === "edit" && worker == null)

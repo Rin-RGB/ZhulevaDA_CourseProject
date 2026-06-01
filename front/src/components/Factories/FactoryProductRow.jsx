@@ -21,8 +21,6 @@ export default function FactoryProductRow({ sort, product, onDelete, onClick, di
             <td>
                 {product.profit}
             </td>
-
-
             {
                 !disabledFields &&
                 <td onClick={onDelete}>

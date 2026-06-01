@@ -84,6 +84,7 @@ router.get('/batches', async (req, res) => {
         const {
             factory_id,
             ingredient_id,
+            fresh,
             limit = 10,
             offset = 0
         } = req.query;
@@ -101,7 +102,57 @@ router.get('/batches', async (req, res) => {
             return res.status(400).json({ error: "offset должен быть неотрицательным числом" });
         }
 
+        let whereSql = `WHERE 1=1`;
         const params = [];
+
+        if (factory_id !== undefined) {
+            if (checkId(factory_id) === null) {
+                return res.status(400).json({ error: "Неверный id завода" })
+            }
+
+            const factoryExists = await elementExists(
+                'factories',
+                factory_id
+            );
+
+            if (!factoryExists) {
+                return res.status(404).json({
+                    error: 'Завод не найден'
+                });
+            }
+
+            whereSql += `
+                AND bi.factory_id = ?
+            `;
+
+            params.push(factory_id);
+        }
+
+        if (ingredient_id !== undefined) {
+            if (checkId(ingredient_id) === null) {
+                return res.status(400).json({ error: "Неверный id ингредиента" })
+            }
+
+            const ingredientExists = await elementExists(
+                'ingredients',
+                ingredient_id
+            );
+
+            if (!ingredientExists) {
+                return res.status(404).json({
+                    error: 'Ингредиент не найден'
+                });
+            }
+
+            whereSql += `
+                AND bi.ingredient_id = ?
+            `;
+
+            params.push(ingredient_id);
+        }
+        if (fresh === 'fresh') {
+            whereSql += ` AND bi.expiry_date > DATE('now') `;
+        }
 
         let sql = `
             SELECT
@@ -128,68 +179,37 @@ router.get('/batches', async (req, res) => {
             LEFT JOIN factories f
                 ON f.id = bi.factory_id
 
-            WHERE 1 = 1
+            ${whereSql}
         `;
 
-        if (factory_id !== undefined) {
-            if (checkId(factory_id) === null) {
-                return res.status(400).json({ error: "Неверный id завода" })
-            }
 
-            const factoryExists = await elementExists(
-                'factories',
-                factory_id
-            );
-
-            if (!factoryExists) {
-                return res.status(404).json({
-                    error: 'Завод не найден'
-                });
-            }
-
-            sql += `
-                AND bi.factory_id = ?
-            `;
-
-            params.push(factory_id);
-        }
-
-        if (ingredient_id !== undefined) {
-            if (checkId(ingredient_id) === null) {
-                return res.status(400).json({ error: "Неверный id ингредиента" })
-            }
-
-            const ingredientExists = await elementExists(
-                'ingredients',
-                ingredient_id
-            );
-
-            if (!ingredientExists) {
-                return res.status(404).json({
-                    error: 'Ингредиент не найден'
-                });
-            }
-
-            sql += `
-                AND bi.ingredient_id = ?
-            `;
-
-            params.push(ingredient_id);
-        }
         sql += `
-            ORDER BY bi.delivery_date DESC
+            ORDER BY is_fresh DESC, bi.delivery_date DESC
             LIMIT ?
             OFFSET ?
         `;
+        const batchesParams = [...params, checkedLimit, checkedOffset]
 
-        params.push(
-            checkedLimit,
-            checkedOffset
-        );
+        const batches = await query(sql, batchesParams);
 
-        const batches = await query(sql, params);
+        const countSql = `
+            SELECT COUNT(DISTINCT bi.id) AS total
+            FROM batch_ingredient bi
+            ${whereSql}
+        `;
 
-        return res.status(200).json(batches);
+        const countParams = [...params];
+
+        const total = await queryOne(countSql, countParams);
+
+        return res.status(200).json({
+            batches,
+            pagination: {
+                total: total.total,
+                limit: checkedLimit,
+                offset: checkedOffset
+            }
+        });
 
     } catch (err) {
 
@@ -456,8 +476,27 @@ router.delete('/batches/:id', async (req, res) => {
 
 router.get('/', async (req, res) => {
     const { search } = req.query;
+    let limit = checkPositiveNumber(req.query.limit);
+    let offset = checkNonNegativeNumber(req.query.offset);
+
+    if (limit === null) limit = 10;
+    if (offset === null) offset = 0;
+
+    let whereSql = `WHERE 1=1`;
     const params = [];
+
     try {
+
+        if (
+            typeof search === 'string' &&
+            search.trim()
+        ) {
+            whereSql += `
+                AND TRIM(i.name) LIKE ?
+            `;
+            params.push(`%${search.trim()}%`)
+        }
+
         let sql = `
             SELECT
                 i.id,
@@ -466,21 +505,32 @@ router.get('/', async (req, res) => {
                 i.expiration_days
 
             FROM ingredients i
+            ${whereSql}
+
+            LIMIT ?
+            OFFSET ?
+        `;
+        const ingredientParams = [...params, limit, offset]
+        const ingredients = await query(sql, ingredientParams);
+
+        const countSql = `
+            SELECT COUNT(DISTINCT i.id) AS total
+            FROM ingredients i
+            ${whereSql}
         `;
 
-        if (
-            typeof search === 'string' &&
-            search.trim()
-        ) {
-            sql += `
-                WHERE LOWER(TRIM(i.name)) LIKE ?
-            `;
-            params.push(`%${search.toLowerCase().trim()}%`)
-        }
+        const countParams = [...params];
 
-        const ingredients = await query(sql, params);
+        const total = await queryOne(countSql, countParams);
 
-        return res.status(200).json(ingredients);
+        return res.status(200).json({
+            ingredients,
+            pagination: {
+                total: total.total,
+                limit,
+                offset
+            }
+        });
 
     } catch (err) {
 
@@ -573,7 +623,7 @@ router.post('/', async (req, res) => {
 
         const ingredientExists = await queryOne(`
             SELECT name FROM ingredients
-            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+            WHERE TRIM(name) = TRIM(?)
         `, [name]);
         if (ingredientExists) {
             return res.status(400).json({
@@ -681,7 +731,7 @@ router.put('/:id', async (req, res) => {
 
         const ingredientExists = await queryOne(`
             SELECT id, name FROM ingredients
-            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+            WHERE TRIM(name) = TRIM(?)
         `, [name]);
 
         if (ingredientExists && ingredientExists.id != id)

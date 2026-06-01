@@ -22,7 +22,7 @@ export default function Header() {
 
                 {" | "}
 
-                <Link to="/supplies">
+                <Link to="/batches">
                     Поставки
                 </Link>
 

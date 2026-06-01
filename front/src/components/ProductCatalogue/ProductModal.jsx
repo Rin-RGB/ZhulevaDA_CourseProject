@@ -82,7 +82,7 @@ export default function ProductModal({
         const ingredients = await api.getIngredients();
         const factories = await api.getFactories();
 
-        setAllIngredients(ingredients || []);
+        setAllIngredients(ingredients.ingredients || []);
         setAllFactories(factories || []);
     }
 

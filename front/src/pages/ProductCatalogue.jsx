@@ -7,8 +7,6 @@ import ProductModal
 import ProductRow
     from "../components/ProductCatalogue/ProductRow";
 
-
-
 export default function ProductCatalogue() {
 
     const [products, setProducts] = useState([]);
@@ -138,7 +136,7 @@ export default function ProductCatalogue() {
 
         if (isEdit) {
 
-            await api.updateProduct(product.id, product);
+            await api.updateProduct(selectedProduct.id, product);
 
             await api.updateProductFactories(product.id, factoriesData);
 
@@ -186,7 +184,7 @@ export default function ProductCatalogue() {
                     onClick={() => {
                         setSort(prev =>
                             prev === "profit"
-                                ? "ingredients"
+                                ? "ingredients_count"
                                 : "profit"
                         );
                     }}
@@ -225,9 +223,7 @@ export default function ProductCatalogue() {
                 <button
                     onClick={onCreate}
                 >
-                    {
-                        "Добавить изделие"
-                    }
+                    Добавить изделие
                 </button>
 
 
@@ -275,7 +271,6 @@ export default function ProductCatalogue() {
                                     </button>
                                 }
                                 <>
-                                    <label htmlFor="pageNum">Страница: </label>
                                     <input
                                         id='pageNum'
                                         type='number'
@@ -302,6 +297,7 @@ export default function ProductCatalogue() {
                                         }}
                                     >
                                     </input>
+                                    {" / "}{pageInfo.totalPages}
                                 </>
 
                                 {page < pageInfo.totalPages &&

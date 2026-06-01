@@ -9,6 +9,7 @@ import BatchesPage from "./pages/BatchesPage";
 import LoginPage from "./pages/LoginPage";
 import MainLayout from "./components/layout/MainLayout";
 import FactoryPage from "./pages/FactoryPage";
+import IngredientsPage from "./pages/IngregientsPage";
 
 export default function App() {
     return (
@@ -22,6 +23,7 @@ export default function App() {
                     <Route path="/employees" element={<WorkersPage />} />
                     <Route path="/batches" element={<BatchesPage />} />
                     <Route path="/factory/:id" element={<FactoryPage />} />
+                    <Route path="/ingredients" element={<IngredientsPage />} />
                 </Route>
             </Routes>
         </BrowserRouter>

@@ -52,7 +52,7 @@ export default function IngredientsSection({
             {ingredients.map((ingredient, index) => (
                 <div key={index}>
                     <select
-                        value={ingredient.id}
+                        value={ingredient?.id}
                         onChange={(e) =>
                             updateIngredient(
                                 index,
@@ -73,7 +73,7 @@ export default function IngredientsSection({
 
                     <input
                         type="number"
-                        value={ingredient.quantity_kg}
+                        value={ingredient?.quantity_kg}
                         onChange={(e) =>
                             updateIngredient(
                                 index,
