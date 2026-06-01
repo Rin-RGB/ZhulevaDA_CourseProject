@@ -1,6 +1,5 @@
-// contexts/AuthContext.jsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { auth } from '../api';
+import { api } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -17,10 +16,9 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Загрузка пользователя при старте
     useEffect(() => {
         const loadUser = async () => {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('accessToken');
             
             if (!token) {
                 setLoading(false);
@@ -28,12 +26,12 @@ export const AuthProvider = ({ children }) => {
             }
 
             try {
-                const userData = await auth.getMe();
+                const userData = await api.getMe();
                 setUser(userData);
                 setIsAuthenticated(true);
             } catch (error) {
                 console.error('Ошибка загрузки пользователя:', error);
-                localStorage.removeItem('access_token');
+                localStorage.removeItem('accessToken');
                 setIsAuthenticated(false);
             } finally {
                 setLoading(false);
@@ -44,25 +42,25 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
-        const response = await auth.login(email, password);
-        const userData = await auth.getMe();
+        const response = await api.login(email, password);
+        const userData = await api.getMe();
         setUser(userData);
         setIsAuthenticated(true);
         return response;
     };
 
     const register = async (email, password) => {
-        const response = await auth.register(email, password);
+        const response = await api.register(email, password);
         return response;
     };
 
     const logout = async () => {
         try {
-            await auth.logout();
+            await api.logout();
         } catch (error) {
             console.error('Ошибка выхода:', error);
         } finally {
-            localStorage.removeItem('access_token');
+            localStorage.removeItem('accessToken');
             setUser(null);
             setIsAuthenticated(false);
         }

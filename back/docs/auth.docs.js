@@ -7,12 +7,12 @@
 
 /**
  * @swagger
- * /auth/register-user:
+ * /api/auth/register:
  *   post:
  *     tags:
  *       - Auth
  *     summary: Регистрация пользователя
- *     description: Устанавливает пароль для существующей учётной записи по email
+ *     description: Устанавливает пароль для существующего сотрудника по email
  *     requestBody:
  *       required: true
  *       content:
@@ -26,7 +26,7 @@
  *               email:
  *                 type: string
  *                 format: email
- *                 description: Email пользователя (должен существовать в таблице workers)
+ *                 description: Email сотрудника (должен существовать в таблице workers)
  *                 example: worker@bakery.com
  *               password:
  *                 type: string
@@ -52,18 +52,36 @@
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Пользователь уже зарегистрирован
  *       404:
  *         description: Пользователь с таким email не найден в системе
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Пользователь с таким email не найден в системе
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Ошибка регистрации
  */
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     tags:
  *       - Auth
@@ -98,17 +116,41 @@
  *                   type: string
  *                   description: JWT access token
  *                   example: eyJhbGciOiJIUzI1NiIs...
+ *       400:
+ *         description: Email и пароль обязательны
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Email и пароль обязательны
  *       401:
  *         description: Неверный email или пароль
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Неверный email или пароль
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Ошибка входа
  */
 
 /**
  * @swagger
- * /auth/refresh:
+ * /api/auth/refresh:
  *   post:
  *     tags:
  *       - Auth
@@ -131,18 +173,36 @@
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Refresh токен не предоставлен
  *       403:
  *         description: Недействительный refresh токен
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Недействительный refresh токен
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Ошибка обновления токена
  */
 
 /**
  * @swagger
- * /auth/logout:
+ * /api/auth/logout:
  *   post:
  *     tags:
  *       - Auth
@@ -161,4 +221,14 @@
  *                 message:
  *                   type: string
  *                   example: Выход выполнен
+ *       500:
+ *         description: Ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Ошибка выхода
  */
