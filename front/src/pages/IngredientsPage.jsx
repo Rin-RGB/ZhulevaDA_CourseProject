@@ -105,9 +105,6 @@ export default function IngredientsPage() {
 
     return (
         <div>
-            <button onClick={() => navigate(`/batches`)}>
-                ← Назад
-            </button>
             <h1>Ингредиенты</h1>
             <div>
                 <input

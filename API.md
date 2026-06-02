@@ -52,7 +52,7 @@
 **Ответ:** `200 OK`
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
 }
 ```
 

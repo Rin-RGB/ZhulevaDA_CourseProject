@@ -431,7 +431,6 @@ router.get('/:id', async (req, res) => {
             });
         }
 
-        // продукт
         const product = await queryOne(`
             SELECT
                 id,
@@ -450,7 +449,6 @@ router.get('/:id', async (req, res) => {
             });
         }
 
-        // прибыль
         const stats = await queryOne(`
             SELECT
 
@@ -479,7 +477,7 @@ router.get('/:id', async (req, res) => {
             GROUP BY p.id
         `, [productId]);
 
-        // заводы
+        
         const factories = await query(`
             SELECT
                 f.id,

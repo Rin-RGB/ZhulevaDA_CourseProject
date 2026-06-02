@@ -20,7 +20,7 @@ app.use(
 );
 
 app.use(cors({
-    origin: "http://localhost:8000",
+    origin: true,
     credentials: true,
 }));
 

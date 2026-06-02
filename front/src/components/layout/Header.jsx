@@ -1,50 +1,79 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../../api";
 
 export default function Header() {
     const navigate = useNavigate();
-    const { user, logout, isAuthenticated } = useAuth();
 
-    const handleLogout = async (e) => {
-        e.preventDefault();
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const roles = {ceo: 'CEO', manager: 'Руководитель завода', worker: 'Работник'}
 
-        const isConfirmed = window.confirm('Вы уверены, что хотите выйти из аккаунта?');
+    useEffect(() => {
+        const loadUser = async () => {
+            try {
+                if (!api.isAuthenticated()) {
+                    setLoading(false);
+                    return;
+                }
 
-        if (isConfirmed) {
-            await logout();
-            navigate('/login');
+                const gotUser = await api.getMe();
+                setUser(gotUser);
+            } catch (error) {
+                console.error("Auth error:", error);
+
+                localStorage.removeItem("access_token");
+                setUser(null);
+                navigate("/login");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadUser();
+    }, [navigate]);
+
+    const handleLogout = async () => {
+        const ok = window.confirm("Вы уверены, что хотите выйти?");
+        if (!ok) return;
+
+        try {
+            await api.logout();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            localStorage.removeItem("access_token");
+            setUser(null);
+            navigate("/login");
         }
     };
-
-    if (!isAuthenticated) {
-        return null; // или показывать упрощённый хедер
-    }
 
     return (
         <header>
             <nav>
-                <div style={{ display: 'flex', gap: '20px' }}>
-                    <Link to="/">Главная</Link>
-                    <Link to="/batches">Поставки</Link>
-                    <Link to="/products">Продукты</Link>
-                    <Link to="/ingredients">Ингредиенты</Link>
-                    <Link to="/workers">Сотрудники</Link>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <span>
-                        {user?.name} {user?.last_name} ({user?.role})
-                    </span>
-                    <Link
-                        to="/login"
-                        onClick={handleLogout}
-                        style={{ color: 'red' }}
-                    >
-                        Выйти
-                    </Link>
-                </div>
-
+                <Link to="/">Каталог</Link> |
+                <Link to="/factories">Заводы</Link> |
+                <Link to="/employees">Сотрудники</Link> |
+                <Link to="/batches">Поставки</Link> |
+                <Link to="/ingredients">Ингредиенты</Link>
             </nav>
+
+            <div>
+                {loading ? (
+                    <span>Загрузка...</span>
+                ) : user ? (
+                    <>
+                        <span>
+                            {`${user.name} ${user.last_name}: ${roles[user.role]}`}
+                        </span>
+                        <button onClick={handleLogout}>
+                            Выйти
+                        </button>
+                    </>
+                ) : (
+                    <Link to="/login">Войти</Link>
+                )}
+            </div>
         </header>
     );
 }

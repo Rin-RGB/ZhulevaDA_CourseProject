@@ -167,9 +167,7 @@ export default function BatchesPage() {
                 </button>
             </h1>
             <div>
-                {mode === 'ingredients' &&
-                    <button onClick={() => navigate('/ingredients')}>Ингредиенты</button>
-                }
+
                 <button onClick={() => setOpenCreateModal(true)}>Добавить поставку</button>
 
                 <select

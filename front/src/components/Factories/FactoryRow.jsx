@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-export default function FactoryRow({ factory, sort }) {
+export default function FactoryRow({ factory, sort, onDelete }) {
     const navigate = useNavigate();
     const [ceos, setCeos] = useState([]);
     const [managers, setManagers] = useState([]);
@@ -39,6 +39,9 @@ export default function FactoryRow({ factory, sort }) {
 
             <td>
                 {sort === "total_value" ? factory.total_value : factory.volume}
+            </td>
+            <td onClick={onDelete}>
+                <i className="bi bi-trash3"></i>
             </td>
 
         </tr>

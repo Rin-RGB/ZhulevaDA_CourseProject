@@ -15,7 +15,6 @@ const rolesPriority = {
     manager: 2,
     ceo: 3
 };
-const refreshTokens = new Set();
 
 function checkEmail(email) {
     if (!email) {
@@ -154,12 +153,11 @@ router.post('/login', async (req, res) => {
 
         const accessToken = generateAccessToken(existingUser);
         const refreshToken = generateRefreshToken(existingUser);
-        refreshTokens.add(refreshToken);
 
         res.cookie('refresh_token', refreshToken, {
             httpOnly: true,
+            sameSite: 'lax',
             secure: false,
-            sameSite: 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -179,11 +177,7 @@ router.post('/refresh', async (req, res) => {
     if (!refreshToken) {
         return res.status(401).json({ error: 'Refresh токен не предоставлен' });
     }
-    if (!refreshTokens.has(refreshToken)) {
-        return res.status(401).json({
-            error: "Некорректный refresh токен",
-        });
-    }
+
     try {
 
         const decoded = verifyRefreshToken(refreshToken);
@@ -199,6 +193,21 @@ router.post('/refresh', async (req, res) => {
         }
 
         const newAccessToken = generateAccessToken(user);
+        const newRefreshToken = generateRefreshToken(user);
+
+        res.clearCookie('refresh_token', {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax'
+        });
+
+        res.cookie('refresh_token', newRefreshToken, {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
 
         return res.status(200).json({
             access_token: newAccessToken
@@ -213,13 +222,11 @@ router.post('/refresh', async (req, res) => {
 router.post('/logout', async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
-        if (refreshToken) {
-            refreshTokens.delete(refreshToken);
-        }
+
         res.clearCookie('refresh_token', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
+            secure: false,
+            sameSite: 'lax'
         });
 
         return res.status(200).json({ message: 'Выход выполнен' });

@@ -4,7 +4,7 @@ const { queryOne } = require("../db/database");
 const ACCESS_SECRET = "access_secret";
 const REFRESH_SECRET = "refresh_secret";
 
-const ACCESS_EXPIRES_IN = "15m";
+const ACCESS_EXPIRES_IN = "4h";
 const REFRESH_EXPIRES_IN = "7d";
 
 function generateAccessToken(user) {

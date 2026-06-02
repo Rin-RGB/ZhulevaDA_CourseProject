@@ -54,6 +54,21 @@ export default function FactoriesPage() {
         loadFactories();
         setModalOpen(false);
     }
+    const onDelete = async (factory) => {
+
+        try {
+            const agreement = window.confirm(
+                "Вы уверены, что хотите удалить завод?"
+            );
+            if (!agreement) return;
+            await api.deleteFactory(factory.id);
+
+            await loadFactories();
+
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     return (
         <div>
@@ -100,6 +115,7 @@ export default function FactoriesPage() {
                                 <th>Руководители</th>
                                 <th>Управление</th>
                                 <th>{sort === "total_value" ? "Сумма изделий" : "Объём производства"}</th>
+                                <th>Удалить</th>
                             </tr>
                         </thead>
 
@@ -110,6 +126,7 @@ export default function FactoriesPage() {
                                         key={factory.id}
                                         factory={factory}
                                         sort={sort}
+                                        onDelete={()=>onDelete(factory)}
                                     />
                                 ))
                             }

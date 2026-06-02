@@ -1,5 +1,4 @@
-// components/AuthForm.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function AuthForm({ mode, onSubmit, loading }) {
     const [formData, setFormData] = useState({
@@ -10,6 +9,14 @@ export default function AuthForm({ mode, onSubmit, loading }) {
     const [error, setError] = useState("");
 
     const isLogin = mode === "login";
+    useEffect(() => {
+        setFormData({
+            email: "",
+            password: "",
+            confirmPassword: ""
+        });
+        setError("");
+    }, [mode]);
 
     const handleChange = (e) => {
         setFormData({
@@ -19,17 +26,22 @@ export default function AuthForm({ mode, onSubmit, loading }) {
         setError("");
     };
 
+    const isDisabled =
+        loading ||
+        !formData.email.trim() ||
+        !formData.password.trim();
+
     const validateForm = () => {
         if (!formData.email.trim()) {
             setError("Email обязателен");
             return false;
         }
-        
+
         if (!formData.password.trim()) {
             setError("Пароль обязателен");
             return false;
         }
-        
+
         if (!isLogin) {
             if (formData.password !== formData.confirmPassword) {
                 setError("Пароли не совпадают");
@@ -40,7 +52,7 @@ export default function AuthForm({ mode, onSubmit, loading }) {
                 return false;
             }
         }
-        
+
         return true;
     };
 
@@ -51,7 +63,7 @@ export default function AuthForm({ mode, onSubmit, loading }) {
     };
 
     return (
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={(e) => {handleSubmit(e)}}>
             <h1 className="auth-form__title">
                 {isLogin ? "Вход" : "Регистрация"}
             </h1>
@@ -112,7 +124,7 @@ export default function AuthForm({ mode, onSubmit, loading }) {
             <button
                 type="submit"
                 className="auth-form__submit"
-                disabled={loading}
+                disabled={isDisabled}
             >
                 {loading
                     ? (isLogin ? "Вход..." : "Регистрация...")
