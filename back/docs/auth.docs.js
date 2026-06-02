@@ -112,7 +112,7 @@
  *             schema:
  *               type: object
  *               properties:
- *                 token:
+ *                 access_token:
  *                   type: string
  *                   description: JWT access token
  *                   example: eyJhbGciOiJIUzI1NiIs...

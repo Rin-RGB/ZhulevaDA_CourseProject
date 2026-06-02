@@ -1,20 +1,86 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const router = express.Router();
+const validator = require('validator');
 
-const { runQuery, queryOne } = require('../db/database');
+const { runQuery, queryOne, query } = require('../db/database');
 const {
     generateAccessToken,
     generateRefreshToken,
-    verifyRefreshToken
+    verifyRefreshToken,
 } = require('../middleware/auth');
 
-// Регистрация пользователя
+const rolesPriority = {
+    worker: 1,
+    manager: 2,
+    ceo: 3
+};
+const refreshTokens = new Set();
+
+function checkEmail(email) {
+    if (!email) {
+        return null;
+    }
+    const clearEmail = email.trim();
+    if (!validator.isEmail(clearEmail)) {
+        return null;
+    }
+    return clearEmail;
+}
+function hashPassword(password) {
+    const rounds = 10;
+    return bcrypt.hash(password, rounds);
+}
+async function verifyPassword(password, passwordHash) {
+    return bcrypt.compare(password, passwordHash);
+}
+
+const userExists = async (email = null, id = null) => {
+    const clearEmail = email ? checkEmail(email) : null; const exists = await queryOne(`
+        SELECT 
+        id, email, name, last_name, hashed_password
+        FROM workers
+        WHERE email = ?
+        OR id = ?
+    `, [clearEmail, id]);
+    if ((clearEmail === null && id === null) || !exists) {
+        return null;
+    }
+    const factories = await query(`
+            SELECT
+
+                fw.factory_id as id,
+                f.name,
+                fw.role
+
+            FROM factory_worker fw
+            JOIN factories f
+                ON f.id = fw.factory_id
+
+            WHERE fw.worker_id = ?
+        `, [exists.id]);
+
+    let highestRole = 'worker';
+
+    for (const f of factories) {
+        if (
+            rolesPriority[f.role] &&
+            rolesPriority[f.role] > rolesPriority[highestRole]
+        ) {
+            highestRole = f.role;
+        }
+    }
+
+    exists.role = highestRole;
+
+    return exists;
+}
+
 router.post('/register', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const password = req.body.password.trim();
+        const email = checkEmail(req.body.email);
 
-        // Валидация
         if (!email || !password) {
             return res.status(400).json({ error: 'Email и пароль обязательны' });
         }
@@ -23,34 +89,34 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'Пароль должен быть минимум 6 символов' });
         }
 
-        // Проверяем, существует ли пользователь с таким email
-        const existingUser = await queryOne(`
-            SELECT id FROM workers WHERE email = ?
-        `, [email]);
+        const existingUser = await userExists(email);
 
         if (!existingUser) {
             return res.status(404).json({ error: 'Пользователь с таким email не найден в системе' });
         }
 
-        // Проверяем, не зарегистрирован ли уже этот пользователь
         const hasPassword = await queryOne(`
-            SELECT id FROM workers WHERE email = ? AND hashed_password IS NOT NULL
+            SELECT id FROM workers 
+            WHERE email = ? 
+            AND (hashed_password IS NOT NULL
+            OR is_authorized = 1)
         `, [email]);
 
         if (hasPassword) {
             return res.status(400).json({ error: 'Пользователь уже зарегистрирован' });
         }
 
-        // Хешируем пароль
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const newUser = {
+            email: email,
+            hashedPassword: await hashPassword(password)
+        };
 
         // Обновляем пользователя
         await runQuery(`
             UPDATE workers 
             SET hashed_password = ?, is_authorized = 1 
             WHERE email = ?
-        `, [hashedPassword, email]);
+        `, [newUser.hashedPassword, newUser.email]);
 
         const user = await queryOne(`
             SELECT id, email, name, last_name FROM workers WHERE email = ?
@@ -67,51 +133,38 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Вход в систему
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
-
+        const password = req.body.password.trim();
+        const email = checkEmail(req.body.email);
         if (!email || !password) {
             return res.status(400).json({ error: 'Email и пароль обязательны' });
         }
-
-        // Ищем пользователя
-        const user = await queryOne(`
-            SELECT id, email, name, last_name, hashed_password, is_authorized
-            FROM workers 
-            WHERE email = ?
-        `, [email]);
-
-        if (!user) {
-            return res.status(401).json({ error: 'Неверный email или пароль' });
+        const existingUser = await userExists(email);
+        if (!existingUser) {
+            return res.status(404).json({ error: 'Пользователь с таким email не найден в системе' });
+        }
+        if (!existingUser.hashed_password) {
+            return res.status(401).json({ error: 'Пользователь не зарегистрирован' });
+        }
+        const isAuth = await verifyPassword(password, existingUser.hashed_password);
+        if (!isAuth) {
+            return res.status(401).json({ error: 'Неверный пароль' });
         }
 
-        if (!user.hashed_password) {
-            return res.status(401).json({ error: 'Пользователь не зарегистрирован. Используйте /auth/register-user' });
-        }
+        const accessToken = generateAccessToken(existingUser);
+        const refreshToken = generateRefreshToken(existingUser);
+        refreshTokens.add(refreshToken);
 
-        // Проверяем пароль
-        const isValidPassword = await bcrypt.compare(password, user.hashed_password);
-        
-        if (!isValidPassword) {
-            return res.status(401).json({ error: 'Неверный email или пароль' });
-        }
-
-        // Генерируем токены
-        const accessToken = generateAccessToken(user.id);
-        const refreshToken = generateRefreshToken(user.id);
-
-        // Сохраняем refresh token в HTTP-only cookie
         res.cookie('refresh_token', refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // true в production
+            secure: false,
             sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 дней
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         return res.status(200).json({
-            token: accessToken
+            access_token: accessToken
         });
 
     } catch (err) {
@@ -120,32 +173,32 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Обновление токена
 router.post('/refresh', async (req, res) => {
-    try {
-        const refreshToken = req.cookies?.refresh_token;
+    const refreshToken = req.cookies?.refresh_token;
 
-        if (!refreshToken) {
-            return res.status(401).json({ error: 'Refresh токен не предоставлен' });
-        }
+    if (!refreshToken) {
+        return res.status(401).json({ error: 'Refresh токен не предоставлен' });
+    }
+    if (!refreshTokens.has(refreshToken)) {
+        return res.status(401).json({
+            error: "Некорректный refresh токен",
+        });
+    }
+    try {
 
         const decoded = verifyRefreshToken(refreshToken);
-        
+
         if (!decoded) {
             return res.status(403).json({ error: 'Недействительный refresh токен' });
         }
 
-        // Проверяем, существует ли пользователь
-        const user = await queryOne(`
-            SELECT id FROM workers WHERE id = ? AND is_authorized = 1
-        `, [decoded.userId]);
+        const user = await userExists(null, decoded.sub);
 
         if (!user) {
             return res.status(403).json({ error: 'Пользователь не найден или не авторизован' });
         }
 
-        // Генерируем новый access токен
-        const newAccessToken = generateAccessToken(user.id);
+        const newAccessToken = generateAccessToken(user);
 
         return res.status(200).json({
             access_token: newAccessToken
@@ -157,10 +210,12 @@ router.post('/refresh', async (req, res) => {
     }
 });
 
-// Выход из системы
 router.post('/logout', async (req, res) => {
     try {
-        // Очищаем cookie с refresh токеном
+        const refreshToken = req.cookies.refreshToken;
+        if (refreshToken) {
+            refreshTokens.delete(refreshToken);
+        }
         res.clearCookie('refresh_token', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',

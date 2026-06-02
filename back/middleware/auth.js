@@ -1,69 +1,97 @@
-const jwt = require('jsonwebtoken');
-const { queryOne } = require('../db/database');
+const jwt = require("jsonwebtoken");
+const { queryOne } = require("../db/database");
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
+const ACCESS_SECRET = "access_secret";
+const REFRESH_SECRET = "refresh_secret";
 
-function generateAccessToken(userId) {
+const ACCESS_EXPIRES_IN = "15m";
+const REFRESH_EXPIRES_IN = "7d";
+
+function generateAccessToken(user) {
     return jwt.sign(
-        { userId, type: 'access' },
-        JWT_SECRET,
-        { expiresIn: '15m' }
+        {
+            sub: user.id,
+            email: user.email,
+            role: user.role,
+        },
+        ACCESS_SECRET,
+        {
+            expiresIn: ACCESS_EXPIRES_IN,
+        }
     );
 }
 
-function generateRefreshToken(userId) {
+function generateRefreshToken(user) {
     return jwt.sign(
-        { userId, type: 'refresh' },
-        JWT_REFRESH_SECRET,
-        { expiresIn: '7d' }
+        {
+            sub: user.id,
+        },
+        REFRESH_SECRET,
+        {
+            expiresIn: REFRESH_EXPIRES_IN,
+        }
     );
 }
 
 function verifyAccessToken(token) {
     try {
-        return jwt.verify(token, JWT_SECRET);
-    } catch (err) {
+        return jwt.verify(token, ACCESS_SECRET);
+    } catch {
         return null;
     }
 }
 
 function verifyRefreshToken(token) {
     try {
-        return jwt.verify(token, JWT_REFRESH_SECRET);
-    } catch (err) {
+        return jwt.verify(token, REFRESH_SECRET);
+    } catch {
         return null;
     }
 }
 
-// Middleware: проверяет токен и загружает пользователя
-async function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-        return res.status(401).json({ error: 'Токен не предоставлен' });
+async function authenticateToken(req, res, next) {
+    const header = req.headers.authorization || "";
+    const [scheme, token] = header.split(" ");
+
+
+    if (scheme !== "Bearer" || !token) {
+        return res.status(401).json({
+            error: "Missing or invalid Authorization header",
+        });
     }
 
     const decoded = verifyAccessToken(token);
-    
+
     if (!decoded) {
-        return res.status(403).json({ error: 'Недействительный или просроченный токен' });
+        return res.status(401).json({
+            error: "Недействительный или просроченный токен",
+        });
     }
 
-    req.userId = decoded.userId;
-    
-    // Загружаем базовую информацию о пользователе
     const user = await queryOne(`
-        SELECT id, email, name, last_name, is_authorized
-        FROM workers 
+        SELECT
+        id,
+            email,
+            name,
+            last_name,
+            is_authorized
+        FROM workers
         WHERE id = ?
-    `, [req.userId]);
-    
-    if (!user || !user.is_authorized) {
-        return res.status(403).json({ error: 'Пользователь не авторизован' });
+    `, [decoded.sub]);
+
+    if (!user) {
+        return res.status(404).json({
+            error: "Пользователь не найден",
+        });
     }
-    
+
+    if (!user.is_authorized) {
+        return res.status(403).json({
+            error: "Пользователь не авторизован",
+        });
+    }
+
     req.user = user;
     next();
 }
@@ -73,5 +101,5 @@ module.exports = {
     generateRefreshToken,
     verifyAccessToken,
     verifyRefreshToken,
-    authenticateToken
+    authenticateToken,
 };
