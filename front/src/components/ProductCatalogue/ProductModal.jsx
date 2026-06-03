@@ -14,7 +14,10 @@ export default function ProductModal({
     onDelete,
     onSubmit,
     onClose,
-    modalMode
+    modalMode,
+    allFactories,
+    CEOAccess,
+    managerAccess
 }) {
 
     const [loading, setLoading] = useState(true);
@@ -23,7 +26,6 @@ export default function ProductModal({
     const [allIngredients, setAllIngredients] = useState([]);
 
     const [selectedFactories, setSelectedFactories] = useState([]);
-    const [allFactories, setAllFactories] = useState([]);
 
     const [profit, setProfit] = useState("");
 
@@ -83,7 +85,6 @@ export default function ProductModal({
         const factories = await api.getFactories();
 
         setAllIngredients(ingredients.ingredients || []);
-        setAllFactories(factories || []);
     }
 
     useEffect(() => {
@@ -223,13 +224,17 @@ export default function ProductModal({
                 </>
             )}
 
-            {modalMode === "read" && (
+            {modalMode === "read" &&
                 <>
-                    <button onClick={onEdit}>Редактировать</button>
-                    <button onClick={handleDelete}>Удалить</button>
+                    {CEOAccess && (
+                        <>
+                            <button onClick={onEdit}>Редактировать</button>
+                            <button onClick={handleDelete}>Удалить</button>
+                        </>
+                    )}
+                    <button onClick={onClose}>Закрыть</button>
                 </>
-            )}
-
+            }
         </div>
     );
 }

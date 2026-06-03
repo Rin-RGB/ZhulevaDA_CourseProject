@@ -12,9 +12,13 @@ export default function FactoriesSection({
             <ul>
                 {selectedFactories.map(factory => (
                     <li key={factory.id}>
-                        {factory.name
-                            ? `${factory.name} : произведено ${factory.total_produced} шт.`
-                            : `Factory ID ${factory.id}`}
+                        {factory.name}
+
+                        {allFactories.some(f => f.id === factory.id) && (
+                            <span>
+                                : произведено {factory.total_produced} шт.
+                            </span>
+                        )}
                     </li>
                 ))}
             </ul>
@@ -48,7 +52,7 @@ export default function FactoriesSection({
                                             return prev;
                                         }
 
-                                        return [...prev, factory]; 
+                                        return [...prev, factory];
                                     }
 
                                     return prev.filter(

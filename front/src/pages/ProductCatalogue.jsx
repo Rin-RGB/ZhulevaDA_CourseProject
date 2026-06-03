@@ -27,6 +27,9 @@ export default function ProductCatalogue() {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("read");
 
+    const [CEOAccess, setCEOAccess] = useState(false);
+    const [managerAccess, setManagerAccess] = useState(false);
+
     const loadProducts = async (offset = 0) => {
 
         try {
@@ -66,8 +69,10 @@ export default function ProductCatalogue() {
 
     const loadFactories = async () => {
         try {
-            const response = await api.getFactories();
-            setFactories(response);
+            const response = await api.getMe();
+            setFactories(response.factories);
+            setCEOAccess(response.role === 'ceo');
+            setManagerAccess(response.role === 'ceo' || response.role === 'manager');
         } catch (err) {
             console.error(err);
         }
@@ -116,6 +121,10 @@ export default function ProductCatalogue() {
         }
     };
     const onEdit = async () => {
+        if (!CEOAccess) {
+            window.alert('Вы не можете менять изделия');
+            return;
+        }
         setModalMode('edit');
         setModalOpen(true);
     }
@@ -124,6 +133,10 @@ export default function ProductCatalogue() {
         setModalOpen(true);
     }
     const onCreate = async () => {
+        if (!CEOAccess) {
+            window.alert('Вы не можете создавать изделия');
+            return;
+        }
         setModalMode("create");
         setModalOpen(true);
     }
@@ -135,6 +148,10 @@ export default function ProductCatalogue() {
         const isCreate = modalMode === "create";
 
         if (isEdit) {
+            if (!CEOAccess) {
+                window.alert('Вы не можете менять изделия');
+                return;
+            }
 
             await api.updateProduct(selectedProduct.id, product);
 
@@ -147,6 +164,11 @@ export default function ProductCatalogue() {
         }
 
         if (isCreate) {
+
+            if (!CEOAccess) {
+                window.alert('Вы не можете создавать изделия');
+                return;
+            }
 
             const createdProduct = await api.createProduct({
                 ...product,
@@ -220,13 +242,14 @@ export default function ProductCatalogue() {
 
                 </select>
 
-                <button
-                    onClick={onCreate}
-                >
-                    Добавить изделие
-                </button>
-
-
+                {
+                    CEOAccess &&
+                    <button
+                        onClick={onCreate}
+                    >
+                        Добавить изделие
+                    </button>
+                }
             </div>
 
             {
@@ -325,6 +348,9 @@ export default function ProductCatalogue() {
                     onSubmit={onSubmit}
                     onClose={closeModal}
                     modalMode={modalMode}
+                    allFactories={factories}
+                    CEOAccess={CEOAccess}
+                    managerAccess={managerAccess}
                 />
             )}
         </div>
