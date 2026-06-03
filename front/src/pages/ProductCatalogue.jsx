@@ -108,6 +108,10 @@ export default function ProductCatalogue() {
     const onDelete = async (productId) => {
 
         try {
+            if (!CEOAccess) {
+                window.alert('Вы не можете удалять изделия');
+                return;
+            }
             const agreement = window.confirm(
                 "Вы уверены, что хотите удалить изделие?"
             );

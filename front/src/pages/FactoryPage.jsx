@@ -7,9 +7,46 @@ import FactoryProductRow from "../components/Factories/FactoryProductRow";
 import AddProductModal from "../components/Factories/AddProductModal";
 
 export default function FactoryPage() {
+
+    const [myFactories, setMyFactories] = useState([]);
+    const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+
+    const loadRole = async () => {
+        try {
+            const response = await api.getMe();
+
+            setMyFactories(response.factories);
+            setCEOAccess(response.role === 'ceo');
+            setManagerAccess(
+                response.role === 'ceo' ||
+                response.role === 'manager'
+            );
+        } finally {
+            setPermissionsLoaded(true);
+        }
+    };
+    useEffect(() => {
+        loadRole();
+    }, []);
+    useEffect(() => {
+        if (myFactories.length === 0) {
+            return;
+        }
+
+        if (!myFactories.some(f => f.id === Number(id))) {
+            navigate('/factories', {
+                state: {
+                    error: 'У вас нет доступа к этому заводу'
+                }
+            });
+        }
+
+    }, [myFactories])
+
     const { id } = useParams();
     const navigate = useNavigate();
     const [factory, setFactory] = useState("");
+
     const [form, setForm] = useState({
         name: '',
         address: ''
@@ -28,6 +65,9 @@ export default function FactoryPage() {
     const [error, setError] = useState("");
     const [mode, setMode] = useState('read');
     const [modalOpen, setModalOpen] = useState(false);
+
+    const [CEOAccess, setCEOAccess] = useState(false);
+    const [managerAccess, setManagerAccess] = useState(false);
 
     const loadFactory = async () => {
         try {
@@ -76,12 +116,33 @@ export default function FactoryPage() {
         }
     }
 
+
     useEffect(() => {
+        if (!permissionsLoaded) {
+            return;
+        }
+
+        if (!myFactories.some(f => f.id === Number(id))) {
+            navigate('/factories');
+            return;
+        }
         loadFactory();
-    }, [id]);
+    }, [permissionsLoaded, myFactories, id]);
     useEffect(() => {
+        if (!permissionsLoaded) {
+            return;
+        }
+
+        if (!myFactories.some(f => f.id === Number(id))) {
+            navigate('/factories');
+            return;
+        }
         loadProducts();
-    }, [search, sort, id]);
+    }, [search, sort, permissionsLoaded, myFactories, id]);
+
+    if (!permissionsLoaded) {
+        return <div>Загрузка...</div>;
+    }
 
     if (loading) {
         return <h2>Загрузка...</h2>;
@@ -100,6 +161,10 @@ export default function FactoryPage() {
     };
     const onDelete = async (productId) => {
         try {
+            if (!managerAccess) {
+                window.alert('Вы не можете удалять изделие с завода');
+                return;
+            }
             const agreement = window.confirm(
                 "Вы уверены, что хотите удалить изделие с завода?"
             );
@@ -113,10 +178,18 @@ export default function FactoryPage() {
         }
     };
     const onEdit = async (factory) => {
+        if (!managerAccess) {
+            window.alert('Вы не можете менять данные о заводе');
+            return;
+        }
         await api.updateFactory(id, factory);
         loadFactory();
     }
     const addProduct = async (products) => {
+        if (!managerAccess) {
+            window.alert('Вы не можете добавить изделие на завод');
+            return;
+        }
         for (const productId of products) {
             await api.addProductToFactory(id, productId);
         }
@@ -210,7 +283,7 @@ export default function FactoryPage() {
                                         <FactoryProductRow
                                             key={product.id}
                                             onDelete={() => onDelete(product.id, id)}
-                                            onClick={()=>{}}
+                                            onClick={() => { }}
                                             product={product}
                                             sort={sort}
                                         />

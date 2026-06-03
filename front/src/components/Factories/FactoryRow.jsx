@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-export default function FactoryRow({ factory, sort, onDelete }) {
+export default function FactoryRow({ factory, sort, onDelete, CEOAccess, managerAccess, myFactories }) {
     const navigate = useNavigate();
     const [ceos, setCeos] = useState([]);
     const [managers, setManagers] = useState([]);
@@ -33,16 +33,25 @@ export default function FactoryRow({ factory, sort, onDelete }) {
                 }
             </td>
 
-            <td onClick={() => navigate(`/factory/${factory.id}`)}>
-                <span>Перейти на страницу завода ↳</span>
+
+            <td onClick={() => {
+                if (myFactories.some(f => f.id === factory.id)) {
+                    navigate(`/factory/${factory.id}`);
+                } else {
+                    return;
+                }
+            }}>
+                {myFactories.some(f => f.id === factory.id) &&
+                    <span>Перейти на страницу завода ↳</span>
+                }
             </td>
 
             <td>
                 {sort === "total_value" ? factory.total_value : factory.volume}
             </td>
-            <td onClick={onDelete}>
+            {CEOAccess && <td onClick={onDelete}>
                 <i className="bi bi-trash3"></i>
-            </td>
+            </td>}
 
         </tr>
     )

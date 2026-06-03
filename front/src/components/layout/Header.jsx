@@ -7,7 +7,20 @@ export default function Header() {
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const roles = {ceo: 'CEO', manager: 'Руководитель завода', worker: 'Работник'}
+    const roles = { ceo: 'CEO', manager: 'Руководитель завода', worker: 'Работник' }
+
+    const [CEOAccess, setCEOAccess] = useState(false);
+    const [managerAccess, setManagerAccess] = useState(false);
+
+    const loadRole = async () => {
+        try {
+            const response = await api.getMe();
+            setCEOAccess(response.role === 'ceo');
+            setManagerAccess(response.role === 'ceo' || response.role === 'manager');
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     useEffect(() => {
         const loadUser = async () => {
@@ -32,6 +45,9 @@ export default function Header() {
 
         loadUser();
     }, [navigate]);
+    useEffect(() => {
+        loadRole();
+    }, []);
 
     const handleLogout = async () => {
         const ok = window.confirm("Вы уверены, что хотите выйти?");
@@ -52,8 +68,18 @@ export default function Header() {
         <header>
             <nav>
                 <Link to="/">Каталог</Link> |
-                <Link to="/factories">Заводы</Link> |
-                <Link to="/employees">Сотрудники</Link> |
+                {
+                    managerAccess &&
+                    <>
+                        <Link to="/factories">Заводы</Link> |
+                    </>
+                }
+                {
+                    managerAccess &&
+                    <>
+                        <Link to="/employees">Сотрудники</Link> |
+                    </>
+                }
                 <Link to="/batches">Поставки</Link> |
                 <Link to="/ingredients">Ингредиенты</Link>
             </nav>

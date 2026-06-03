@@ -10,9 +10,13 @@ export default function FactoriesPage() {
 
     const [sort, setSort] = useState("total_value");
     const [factories, setFactories] = useState([]);
+    const [myFactories, setMyFactories] = useState([]);
     const [selectedFactory, setSelectedFactory] = useState("");
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
+
+    const [CEOAccess, setCEOAccess] = useState(false);
+    const [managerAccess, setManagerAccess] = useState(false);
 
     const [error, setError] = useState("");
     const loadFactories = async () => {
@@ -24,7 +28,7 @@ export default function FactoriesPage() {
             const data = await api.getFactories({
                 sort
             });
-            setFactories(data);
+            setFactories(data);            
         } catch (err) {
             console.error(err);
             setError("Ошибка загрузки заводов");
@@ -33,10 +37,24 @@ export default function FactoriesPage() {
         }
 
     };
+    const loadRole = async () => {
+        try {
+            const response = await api.getMe();
+            setMyFactories(response.factories);
+            setCEOAccess(response.role === 'ceo');
+            setManagerAccess(response.role === 'ceo' || response.role === 'manager');
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     useEffect(() => {
         loadFactories();
     }, [sort]);
+    useEffect(() => {
+        loadRole();
+    }, []);
+
 
     if (loading) {
         return <h2>Загрузка...</h2>;
@@ -47,6 +65,10 @@ export default function FactoriesPage() {
     }
 
     const onCreate = () => {
+        if (!CEOAccess) {
+            window.alert('Вы не можете создавать заводы');
+            return;
+        }
         setModalOpen(true);
     }
     const onSubmitCreate = async (factory) => {
@@ -57,6 +79,10 @@ export default function FactoriesPage() {
     const onDelete = async (factory) => {
 
         try {
+            if (!CEOAccess) {
+                window.alert('Вы не можете удалять заводы');
+                return;
+            }
             const agreement = window.confirm(
                 "Вы уверены, что хотите удалить завод?"
             );
@@ -93,13 +119,13 @@ export default function FactoriesPage() {
                     }
                 </button>
 
-                <button
+                {CEOAccess && <button
                     onClick={onCreate}
                 >
                     {
                         "Добавить завод"
                     }
-                </button>
+                </button>}
 
 
             </div>
@@ -115,7 +141,7 @@ export default function FactoriesPage() {
                                 <th>Руководители</th>
                                 <th>Управление</th>
                                 <th>{sort === "total_value" ? "Сумма изделий" : "Объём производства"}</th>
-                                <th>Удалить</th>
+                                {CEOAccess && <th>Удалить</th>}
                             </tr>
                         </thead>
 
@@ -126,7 +152,10 @@ export default function FactoriesPage() {
                                         key={factory.id}
                                         factory={factory}
                                         sort={sort}
-                                        onDelete={()=>onDelete(factory)}
+                                        onDelete={() => onDelete(factory)}
+                                        CEOAccess={CEOAccess}
+                                        managerAccess={managerAccess}
+                                        myFactories={myFactories}
                                     />
                                 ))
                             }
