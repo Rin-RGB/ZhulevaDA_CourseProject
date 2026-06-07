@@ -17,6 +17,8 @@ export default function ProductCatalogue() {
     const [factories, setFactories] = useState([]);
     const [selectedFactory, setSelectedFactory] = useState("");
     const [loading, setLoading] = useState(true);
+    const [showLoading, setShowLoading] = useState(false);
+
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [pageInfo, setPageInfo] = useState({});
     const [page, setPage] = useState(0);
@@ -31,9 +33,12 @@ export default function ProductCatalogue() {
     const [managerAccess, setManagerAccess] = useState(false);
 
     const loadProducts = async (offset = 0) => {
-
+        setShowLoading(false);
+        setLoading(true);
+        const timer = setTimeout(() => {
+            setShowLoading(true);
+        }, 400);
         try {
-            setLoading(true);
             setError("");
 
             const data = await api.getProducts({
@@ -62,9 +67,10 @@ export default function ProductCatalogue() {
             console.error(err);
             setError("Ошибка загрузки продуктов");
         } finally {
+            clearTimeout(timer);
             setLoading(false);
+            setShowLoading(false);
         }
-
     };
 
     const loadFactories = async () => {
@@ -86,7 +92,7 @@ export default function ProductCatalogue() {
         loadProducts();
     }, [search, sort, selectedFactory]);
 
-    if (loading) {
+    if (loading && showLoading) {
         return <h2>Загрузка...</h2>;
     }
 

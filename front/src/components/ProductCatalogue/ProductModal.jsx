@@ -143,7 +143,7 @@ export default function ProductModal({
 
     const modalHeader = () => {
         if (modalMode == 'edit') return 'Редактировать изделие'
-        if (modalMode === 'create') return 'Создать изделие'
+        if (modalMode === 'create') return 'Добавить изделие'
         return 'Изделие'
     }
 
@@ -250,7 +250,7 @@ export default function ProductModal({
                     </>
                 }
             </div>
-            
+
         </div>
     );
 }

@@ -5,35 +5,42 @@ export default function FormField({
     onChange,
     type = "text",
     mode = 'create',
-    labelRequired = true
+    labelRequired = true,
+    horizontal = false
 }) {
     return (
-        <div className={`field field-${mode} ${mode === "read" ? "field--readonly" : ""}`}>
-            {mode === "read" ? (
-                <>
-                    <p className="field-label">{
-                        labelRequired &&
-                        <span>{label}: </span>
-                    }
-                        <span>{value ?? "-"}</span>
-                    </p>
-                </>
-            ) : (
-                <>
-                    <label htmlFor={name}>
-                        {label}
-                    </label>
+        <div
+            className={`
+                field
+                field-${mode}
+                ${horizontal ? "field--horizontal" : ""}
+                ${mode === "read" ? "field--readonly" : ""}
+            `}
+        >            {mode === "read" ? (
+            <>
+                <p className="field-label">{
+                    labelRequired &&
+                    <span>{label}: </span>
+                }
+                    <span>{value ?? "-"}</span>
+                </p>
+            </>
+        ) : (
+            <>
+                <label htmlFor={name}>
+                    {label}
+                </label>
 
-                    <input
-                        id={name}
-                        type={type}
-                        value={value}
-                        onChange={(e) =>
-                            onChange(name, e.target.value)
-                        }
-                    />
-                </>
-            )}
+                <input
+                    id={name}
+                    type={type}
+                    value={value}
+                    onChange={(e) =>
+                        onChange(name, e.target.value)
+                    }
+                />
+            </>
+        )}
         </div>
     );
 }

@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "../api/index";
 
 import WorkerRow from "../components/Workers/WorkerRow";
 import WorkerModal from "../components/Workers/WorkerModal";
 
+
 export default function WorkersPage() {
+    const loadingTimer = useRef(null);
+
+
     const roles =
     {
         ceo: "CEO",
@@ -32,6 +36,8 @@ export default function WorkersPage() {
     const [pageInput, setPageInput] = useState('1')
 
     const [loading, setLoading] = useState(true);
+    const [showLoading, setShowLoading] = useState(false);
+
     const [error, setError] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("edit");
@@ -58,9 +64,18 @@ export default function WorkersPage() {
     };
 
     const loadWorkers = async (offset = 0) => {
+        if (loadingTimer.current) {
+            clearTimeout(loadingTimer.current);
+        }
+
+        setLoading(true);
+        setShowLoading(false);
+
+        loadingTimer.current = setTimeout(() => {
+            setShowLoading(true);
+        }, 500);
 
         try {
-            setLoading(true);
             setError("");
 
             const data = await api.getWorkers({
@@ -93,7 +108,11 @@ export default function WorkersPage() {
             console.error(err);
             setError("Ошибка загрузки сотрудников");
         } finally {
+            clearTimeout(loadingTimer.current);
+            loadingTimer.current = null;
+
             setLoading(false);
+            setShowLoading(false);
         }
     };
 
@@ -117,9 +136,6 @@ export default function WorkersPage() {
         loadRole()
     }, []);
 
-    if (loading) {
-        return <h2>Загрузка...</h2>;
-    }
 
     if (error) {
         return <h2>{error}</h2>;
@@ -244,6 +260,11 @@ export default function WorkersPage() {
 
     return (
         <div className="page">
+            {(loading && showLoading) &&
+                <div className="loading-overlay">
+                    <h2>Загрузка...</h2>
+                </div>
+            }
             <div className="subpage">
                 <h1 className="page__title">Мой аккаунт</h1>
                 <table className="table">
@@ -423,7 +444,7 @@ export default function WorkersPage() {
                                                 newPage = 1;
                                             }
 
-                                            loadProducts(
+                                            loadWorkers(
                                                 pageInfo.limit * (newPage - 1)
                                             );
                                         }}

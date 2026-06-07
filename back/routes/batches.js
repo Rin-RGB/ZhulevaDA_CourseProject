@@ -8,6 +8,9 @@ const {
     queryOne
 } = require('../db/database');
 
+function round(value, digits = 3) {
+    return Number(value.toFixed(digits));
+}
 
 function checkNumber(num) {
     if (
@@ -145,10 +148,10 @@ router.get(
 
                 const stock = await queryOne(`
                     SELECT
-                        COALESCE(
+                        ROUND(COALESCE(
                             SUM(delivery_kg),
                             0
-                        ) AS available
+                        ), 3) AS available
                     FROM batch_ingredient
                     WHERE factory_id = ?
                     AND ingredient_id = ?
@@ -184,7 +187,7 @@ router.get(
                         ingredient.quantity_kg,
 
                     available_kg:
-                        available,
+                        round(available),
 
                     possible_products:
                         possible
@@ -484,7 +487,7 @@ router.post('/', async (req, res) => {
             `, [r.ingredient_id]);
 
             const batches = await query(`
-                SELECT id, delivery_kg
+                SELECT id, ROUND(delivery_kg, 3) as delivery_kg
                 FROM batch_ingredient
                 WHERE factory_id = ?
                 AND ingredient_id = ?
@@ -501,7 +504,7 @@ router.post('/', async (req, res) => {
 
                 await runQuery(`
                     UPDATE batch_ingredient
-                    SET delivery_kg = delivery_kg - ?
+                    SET delivery_kg = ROUND(delivery_kg - ?, 3)
                     WHERE id = ?
                 `, [take, b.id]);
 

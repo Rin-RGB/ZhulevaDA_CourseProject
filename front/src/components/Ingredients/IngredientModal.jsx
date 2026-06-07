@@ -67,41 +67,58 @@ export default function IngredientModal({
     async function handleSubmit() {
         await onSubmit(form);
     }
+    const modalHeader = () => {
+        if (modalMode === 'edit') return 'Редактировать ингредиент';
+        return 'Добавить ингредиент';
+    }
 
 
     return (
-        <div onClick={(e) => e.stopPropagation()}>
-            <button onClick={onClose}>✕</button>
-            <FormField
-                label="Имя"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-            <FormField
-                label="Цена"
-                name="price"
-                value={form.price}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-            <FormField
-                label="Срок годности"
-                name="expiration_days"
-                value={form.expiration_days}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-            <button onClick={() => {
-                onClose()
-            }}>
-                Отменить
-            </button>
-
-            <button onClick={handleSubmit}>
-                Сохранить
-            </button>
+        <div className="modal" onClick={onClose}>
+            <div
+                className="modal__content"
+                onClick={(e) => e.stopPropagation()}>
+                <div className="modal__header">
+                    <p className="modal__title">{modalHeader()}</p>
+                    <button
+                        className="modal__close"
+                        onClick={onClose}>
+                        ✕
+                    </button>
+                </div>
+                <FormField
+                    label="Имя"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    mode={modalMode}
+                />
+                <div className="form-grid">
+                    <FormField
+                        type='number'
+                        label="Цена"
+                        name="price"
+                        value={form.price}
+                        onChange={handleChange}
+                        mode={modalMode}
+                    />
+                    <FormField
+                        type='number'
+                        label="Срок годности"
+                        name="expiration_days"
+                        value={form.expiration_days}
+                        onChange={handleChange}
+                        mode={modalMode}
+                    />
+                </div>
+                <div>
+                    <button
+                        className="modal__save"
+                        onClick={handleSubmit}>
+                        Сохранить
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

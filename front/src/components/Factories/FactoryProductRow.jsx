@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-export default function FactoryProductRow({ sort, product, onDelete, onClick, disabledFields = false, selected = false }) {
+export default function FactoryProductRow({ sort, product, factory, onDelete, onClick, disabledFields = false, selected = false }) {
     return (
         <tr onClick={onClick} className={selected ? "selected" : ""}>
             <td>

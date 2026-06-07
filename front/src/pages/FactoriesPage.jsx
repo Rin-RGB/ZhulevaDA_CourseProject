@@ -13,6 +13,8 @@ export default function FactoriesPage() {
     const [myFactories, setMyFactories] = useState([]);
     const [selectedFactory, setSelectedFactory] = useState("");
     const [loading, setLoading] = useState(true);
+    const [showLoading, setShowLoading] = useState(false);
+
     const [modalOpen, setModalOpen] = useState(false);
 
     const [CEOAccess, setCEOAccess] = useState(false);
@@ -20,9 +22,12 @@ export default function FactoriesPage() {
 
     const [error, setError] = useState("");
     const loadFactories = async () => {
-
+        setShowLoading(false);
+        setLoading(true);
+        const timer = setTimeout(() => {
+            setShowLoading(true);
+        }, 500);
         try {
-            setLoading(true);
             setError("");
 
             const data = await api.getFactories({
@@ -33,14 +38,16 @@ export default function FactoriesPage() {
             console.error(err);
             setError("Ошибка загрузки заводов");
         } finally {
+            clearTimeout(timer);
             setLoading(false);
+            setShowLoading(false);
         }
 
     };
     const loadRole = async () => {
         try {
             const response = await api.getMe();
-            setMyFactories(response.factories);
+            setMyFactories(response.factories.filter(f => (f.role === 'manager' || f.role === 'ceo')));
             setCEOAccess(response.role === 'ceo');
             setManagerAccess(response.role === 'ceo' || response.role === 'manager');
         } catch (err) {
@@ -56,7 +63,7 @@ export default function FactoriesPage() {
     }, []);
 
 
-    if (loading) {
+    if (loading && showLoading) {
         return <h2>Загрузка...</h2>;
     }
 

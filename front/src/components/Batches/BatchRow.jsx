@@ -20,8 +20,12 @@ export default function BatchRow({ mode, batch, onDelete }) {
                 <td>
                     {batch.is_fresh ? 'Да' : 'Нет'}
                 </td>
-                <td onClick={onDelete}>
-                    <i className="bi bi-trash3"></i>
+                <td>
+                    <button
+                        className="btn btn--danger"
+                        onClick={onDelete}>
+                        <i className="bi bi-trash3"></i>
+                    </button>
                 </td>
             </tr>
 

@@ -23,6 +23,8 @@ export default function BatchesPage() {
     const [freshOnly, setFreshOnly] = useState(true);
 
     const [loading, setLoading] = useState(true);
+    const [showLoading, setShowLoading] = useState(false);
+
     const [error, setError] = useState("");
 
     const [pageInfo, setPageInfo] = useState({});
@@ -37,11 +39,12 @@ export default function BatchesPage() {
     };
 
     const loadBatches = async (offset = 0) => {
-
+        setLoading(true);
+        const timer = setTimeout(() => {
+            setShowLoading(true);
+        }, 400);
+        setError("");
         try {
-            setLoading(true);
-            setError("");
-
             const params = {
                 factory_id: selectedFactory || undefined,
                 offset,
@@ -82,7 +85,9 @@ export default function BatchesPage() {
             console.error(err);
             setError("Ошибка загрузки поставок");
         } finally {
+            clearTimeout(timer);
             setLoading(false);
+            setShowLoading(false);
         }
     };
 
@@ -107,7 +112,7 @@ export default function BatchesPage() {
         loadLists();
     }, [mode]);
 
-    if (loading) return <h2>Загрузка...</h2>;
+    if (showLoading) return <h2>Загрузка...</h2>;
     if (error) return <h2>{error}</h2>;
 
     const onDelete = async (batch) => {
@@ -144,11 +149,15 @@ export default function BatchesPage() {
     }
 
     return (
-        <div>
-
-            <h1>
+        <div className="page">
+            <h1 className="page__title">
                 Поставки {" "}
                 <button
+                    className={`
+                    ${mode === 'products' ?
+                            'btn-title--orange' :
+                            'btn-title--green'}
+                    `}
                     onClick={() => {
                         setMode(prev =>
                             prev === "products"
@@ -165,9 +174,12 @@ export default function BatchesPage() {
             </h1>
             <div>
 
-                <button onClick={() => setOpenCreateModal(true)}>Добавить поставку</button>
+                <button
+                    className="btn"
+                    onClick={() => setOpenCreateModal(true)}>Добавить поставку</button>
 
                 <select
+                    className="factory-select"
                     value={selectedFactory}
                     onChange={(e) =>
                         setSelectedFactory(e.target.value)
@@ -183,7 +195,9 @@ export default function BatchesPage() {
                     ))}
                 </select>
 
-                <button onClick={() => setPickerOpen(true)}>
+                <button
+                    className="picker-item__result"
+                    onClick={() => setPickerOpen(true)}>
                     {selectedEntity.name || (mode === "products" ? "Выбрать изделие" : "Выбрать ингредиент")}
                 </button>
 
@@ -201,8 +215,8 @@ export default function BatchesPage() {
             </div>
 
             {batches.length ? (
-                <table border="1" cellPadding="10">
-                    <thead>
+                <table className="table">
+                    <thead className="table__head">
                         <tr>
                             <th>{mode === 'products' ? 'Продукт' : 'Ингредиент'}</th>
                             <th>Завод</th>
@@ -214,7 +228,7 @@ export default function BatchesPage() {
                         </tr>
                     </thead>
 
-                    <tbody>
+                    <tbody className="table__body">
                         {batches.map(batch => (
                             <BatchRow
                                 key={batch.id}
@@ -231,19 +245,24 @@ export default function BatchesPage() {
             )}
 
             {pageInfo.totalPages > 1 && (
-                <div style={{ marginTop: 20 }}>
+                <div
+
+                    className="pagination">
 
                     {page > 1 && (
-                        <button onClick={() =>
-                            loadBatches(
-                                pageInfo.offset - pageInfo.limit
-                            )
-                        }>
+                        <button
+                            className="pagination__btn"
+                            onClick={() =>
+                                loadBatches(
+                                    pageInfo.offset - pageInfo.limit
+                                )
+                            }>
                             {"<"}
                         </button>
                     )}
 
                     <input
+                        className="pagination__input"
                         type="number"
                         value={pageInput}
                         onChange={(e) =>
@@ -267,11 +286,13 @@ export default function BatchesPage() {
                     {" / "}{pageInfo.totalPages}
 
                     {page < pageInfo.totalPages && (
-                        <button onClick={() =>
-                            loadBatches(
-                                pageInfo.offset + pageInfo.limit
-                            )
-                        }>
+                        <button
+                            className="pagination__btn"
+                            onClick={() =>
+                                loadBatches(
+                                    pageInfo.offset + pageInfo.limit
+                                )
+                            }>
                             {">"}
                         </button>
                     )}
@@ -292,7 +313,7 @@ export default function BatchesPage() {
                         setSelectedEntity({ id: "", name: "" });
                         setPickerOpen(false);
                     } else {
-                        setSelectedEntity({ id: item.id, name: item.name }); 
+                        setSelectedEntity({ id: item.id, name: item.name });
                         setPickerOpen(false);
                     }
                 }}

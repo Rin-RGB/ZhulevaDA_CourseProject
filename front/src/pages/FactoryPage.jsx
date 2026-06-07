@@ -16,6 +16,7 @@ export default function FactoryPage() {
     function useFactoryAccess(id) {
         const [myFactories, setMyFactories] = useState([]);
         const [loading, setLoading] = useState(true);
+
         const [hasAccess, setHasAccess] = useState(false);
 
         useEffect(() => {
@@ -438,7 +439,7 @@ export default function FactoryPage() {
                     }}
                     title={"Выберите изделия"}
                     loadItems={async (params) => {
-                        return await api.getProducts({not_factory_id:id, ...params});
+                        return await api.getProducts({ not_factory_id: id, ...params });
                     }}
                     getItems={(data) => {
                         return data.products || [];

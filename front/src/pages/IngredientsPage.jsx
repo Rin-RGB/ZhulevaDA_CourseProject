@@ -9,11 +9,12 @@ export default function IngredientsPage() {
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
+    const [showLoading, setShowLoading] = useState(false);
     const [selectedIngredient, setSelectedIngredient] = useState(null);
     const [pageInfo, setPageInfo] = useState({});
     const [page, setPage] = useState(0);
     const [pageInput, setPageInput] = useState('1')
-
+    const [CEOAccess, setCEOAccess] = useState(false);
 
     const [error, setError] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
@@ -21,9 +22,11 @@ export default function IngredientsPage() {
     const navigate = useNavigate();
 
     const loadIngredients = async (offset = 0) => {
-
+        setLoading(true);
+        const timer = setTimeout(() => {
+            setShowLoading(true);
+        }, 400);
         try {
-            setLoading(true);
             setError("");
 
             const data = await api.getIngredients({
@@ -48,13 +51,27 @@ export default function IngredientsPage() {
             console.error(err);
             setError("Ошибка загрузки ингредиентов");
         } finally {
+            clearTimeout(timer);
             setLoading(false);
+            setShowLoading(false);
         }
     };
+    const loadRole = async () => {
+        try {
+            const response = await api.getMe();
+            setCEOAccess(response.role === 'ceo');
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
         loadIngredients();
     }, [search]);
-    if (loading) {
+    useEffect(() => {
+        loadRole();
+    }, []);
+    if (showLoading) {
         return <h2>Загрузка...</h2>;
     }
 
@@ -104,10 +121,11 @@ export default function IngredientsPage() {
     };
 
     return (
-        <div>
-            <h1>Ингредиенты</h1>
+        <div className="page">
+            <h1 className="page__title">Ингредиенты</h1>
             <div>
                 <input
+                    className="search"
                     type="text"
                     placeholder="Поиск..."
                     value={searchInput}
@@ -120,36 +138,46 @@ export default function IngredientsPage() {
                         }
                     }}
                 />
-                <button onClick={() => onCreate()}>
-                    Добавить ингредиент
-                </button>
+                {CEOAccess &&
+                    <button
+                        className="btn"
+                        onClick={() => onCreate()}>
+                        Добавить ингредиент
+                    </button>}
             </div>
             {
                 ingredients.length > 0 ?
                     <>
-                        <table border="1" cellPadding="10">
-                            <thead>
+                        <table className="table">
+                            <thead className="table__head">
                                 <tr>
                                     <th>Название</th>
                                     <th>Цена</th>
                                     <th>Срок годности</th>
-                                    <th>Удалить</th>
+                                    {CEOAccess && <th>Удалить</th>}
                                 </tr>
                             </thead>
 
-                            <tbody>
+                            <tbody className="table__body">
                                 {
                                     ingredients.map(ingredient => (
-                                        <tr key={ingredient.id} onClick={() => onEdit(ingredient)}>
+                                        <tr key={ingredient.id}>
                                             <td>{ingredient.name}</td>
                                             <td>{ingredient.price}</td>
                                             <td>{ingredient.expiration_days}</td>
-                                            <td onClick={(e) => {
-                                                e.stopPropagation();
-                                                onDelete(ingredient);
-                                            }}>
-                                                <i className="bi bi-trash3"></i>
-                                            </td>
+                                            {CEOAccess && <td>
+                                                <button
+                                                    className="btn"
+                                                    onClick={() => onEdit(ingredient)}
+                                                >
+                                                    <i className="bi bi-pencil-fill"></i>
+                                                </button>
+                                                <button
+                                                    className="btn btn--danger"
+                                                    onClick={() => onDelete(ingredient)} >
+                                                    <i className="bi bi-trash3"></i>
+                                                </button>
+                                            </td>}
                                         </tr>
                                     ))
                                 }
@@ -158,18 +186,21 @@ export default function IngredientsPage() {
 
                         </table>
                         {pageInfo.totalPages > 1 &&
-                            <div>
+                            <div className="pagination">
                                 {page > 1 &&
-                                    <button onClick={async () => {
-                                        loadIngredients(
-                                            pageInfo.offset - pageInfo.limit
-                                        )
-                                    }}>
+                                    <button
+                                        className="pagination__btn"
+                                        onClick={async () => {
+                                            loadIngredients(
+                                                pageInfo.offset - pageInfo.limit
+                                            )
+                                        }}>
                                         {'<'}
                                     </button>
                                 }
                                 <>
                                     <input
+                                        className="pagination__input"
                                         id='pageNum'
                                         type='number'
                                         value={pageInput}
@@ -199,11 +230,13 @@ export default function IngredientsPage() {
                                 </>
 
                                 {page < pageInfo.totalPages &&
-                                    <button onClick={async () => {
-                                        loadIngredients(
-                                            pageInfo.offset + pageInfo.limit
-                                        )
-                                    }}>
+                                    <button
+                                        className="pagination__btn"
+                                        onClick={async () => {
+                                            loadIngredients(
+                                                pageInfo.offset + pageInfo.limit
+                                            )
+                                        }}>
                                         {'>'}
                                     </button>
                                 }
@@ -220,6 +253,6 @@ export default function IngredientsPage() {
                 onSubmit={onSubmit}
                 onClose={onClose}
             />
-        </div>
+        </div >
     );
 }

@@ -37,7 +37,7 @@ export default function AddBatchModal({
     function initEntity() {
         if (mode === 'ingredients') {
             setForm({
-                ingredient_id: 1,
+                ingredient_id: -1,
                 factory_id: factories[0].id,
                 delivery_kg: 0,
                 amount: "",
@@ -46,13 +46,14 @@ export default function AddBatchModal({
             })
         } else {
             setForm({
-                product_id: 1,
+                product_id: -1,
                 factory_id: factories[0].id,
                 amount: 0,
                 delivery_kg: "",
                 ingredient_id: ""
             })
         }
+        setSelectedEntity({ id: "", name: "" });
     }
     useEffect(() => {
         async function loadModal() {
@@ -131,116 +132,196 @@ export default function AddBatchModal({
     if (!open) return;
 
     return (
-        <>
-            <button onClick={onClose}>✕</button>
+        <div className="modal" onClick={onClose}>
+            <div
+                className="modal__content"
+                onClick={(e) => e.stopPropagation()}>
 
-            <select
-                value={form.factory_id}
-                onChange={(e) =>
-                    handleChange('factory_id', e.target.value)
-                }
-            >
-                {factories.map(f => (
-                    <option key={f.id} value={f.id}>
-                        {f.name}
-                    </option>
-                ))}
-            </select>
+                <div className="modal__header">
+                    <p className="modal__title">Добавить поставку</p>
+                    <button
+                        className="modal__close"
+                        onClick={onClose}>
+                        ✕
+                    </button>
+                </div>
+                <div className="modal__section">
 
-            <p><button onClick={() => setPickerOpen(true)}>
-                {selectedEntity.name || (mode === "products" ? "Выбрать изделие" : "Выбрать ингредиент")}
-            </button></p>
+                    <label className="factory-info__label">
+                        Завод
+                    </label>
 
-            <FormField
-                label="Количество"
-                name={mode === 'products' ? 'amount' : 'delivery_kg'}
-                value={mode === 'products' ? form.amount : form.delivery_kg}
-                onChange={handleChange}
-            />
-            {
-                mode === "products" &&
-                maxProduction && (
-                    <>
-                        <p>
-                            Максимальное количество:
-                            {" "}
-                            {maxProduction.max_amount}
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setShowIngredients(
-                                        prev => !prev
-                                    )
-                                }
-                            >
-                                {showIngredients ? "▲" : "▼"}
-                            </button>
-                        </p>
-
-                        {
-                            showIngredients &&
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Ингредиент</th>
-                                        <th>Доступно</th>
-                                        <th>Количество изделий из этого количества</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {maxProduction.ingredients.map(
-                                        ingredient => (
-                                            <tr
-                                                key={
-                                                    ingredient.ingredient_id
-                                                }
-                                            >
-                                                <td>{ingredient.ingredient_name}</td>
-                                                <td>{ingredient.available_kg} кг.</td>
-                                                <td>{ingredient.possible_products}шт.</td>
-                                            </tr>
-                                        )
-                                    )}
-                                </tbody>
-                            </table>
+                    <select
+                        className="factory-select"
+                        id="batch_factory"
+                        value={form.factory_id}
+                        onChange={(e) =>
+                            handleChange("factory_id", e.target.value)
                         }
-                    </>
-                )
-            }
-            <button onClick={handleSubmit}>Добавить</button>
-            <PickerModal
-                open={pickerOpen}
-                onClose={() => setPickerOpen(false)}
-                onSelect={(item) => {
-                    if (item === null) {
-                        setSelectedEntity({ id: "", name: "" });
-                        setPickerOpen(false);
-                    } else {
-                        setSelectedEntity({ id: item.id, name: item.name });
-                        setPickerOpen(false);
+                    >
+                        {factories.map(f => (
+                            <option key={f.id} value={f.id}>
+                                {f.name}
+                            </option>
+                        ))}
+                    </select>
+
+                </div>
+
+                <div className="modal__section">
+
+                    <label className="factory-info__label">
+                        {mode === "products"
+                            ? "Изделие"
+                            : "Ингредиент"}
+                    </label>
+
+                    <button
+                        className="btn--toggle"
+                        onClick={() => setPickerOpen(true)}
+                    >
+                        {
+                            selectedEntity.name ||
+                            (
+                                mode === "products"
+                                    ? "Выбрать изделие"
+                                    : "Выбрать ингредиент"
+                            )
+                        }
+                    </button>
+
+                </div>
+
+                <FormField
+                    horizontal={true}
+                    type='number'
+                    label={
+                        mode === "products"
+                            ? "Количество"
+                            : "Поставка (кг)"
                     }
-                }}
-                title={mode === "products" ? "Выберите изделие" : "Выберите ингредиент"}
-                loadItems={async (params) => {
-                    if (mode === "products") {
-                        return await api.getProducts({
-                            ...params,
-                            factory_id: form?.factory_id
-                        });
-                    } else {
-                        return await api.getIngredients(params);
+                    name={
+                        mode === "products"
+                            ? "amount"
+                            : "delivery_kg"
                     }
-                }}
-                getItems={(data) => {
-                    if (mode === "products") {
-                        return data.products || [];
-                    } else {
-                        return data.ingredients || [];
+                    value={
+                        mode === "products"
+                            ? form.amount
+                            : form.delivery_kg
                     }
-                }}
-                disabledOption={true}
-            />
-        </>
+                    onChange={handleChange}
+                />
+                {
+                    mode === "products" &&
+                    maxProduction && (
+                        <>
+                            <div className="production-info">
+
+                                <div className="production-info__header">
+                                    <span>
+                                        Максимальное количество:
+                                        <strong>
+                                            {" "}
+                                            {maxProduction.max_amount}
+                                        </strong>
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        className="btn--toggle"
+                                        onClick={() =>
+                                            setShowIngredients(prev => !prev)
+                                        }
+                                    >
+                                        {
+                                            showIngredients
+                                                ? "Скрыть"
+                                                : "Показать состав"
+                                        }
+                                    </button>
+                                </div>
+
+                                {showIngredients && (
+                                    <table className="table">
+                                        <thead className="table__head">
+                                            <tr>
+                                                <th>Ингредиент</th>
+                                                <th>Доступно</th>
+                                                <th>Можно произвести</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {maxProduction.ingredients.map(
+                                                ingredient => (
+                                                    <tr
+                                                        key={
+                                                            ingredient.ingredient_id
+                                                        }
+                                                    >
+                                                        <td>
+                                                            {ingredient.ingredient_name}
+                                                        </td>
+
+                                                        <td>
+                                                            {ingredient.available_kg} кг
+                                                        </td>
+
+                                                        <td>
+                                                            {ingredient.possible_products}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            )}
+                                        </tbody>
+                                    </table>
+                                )}
+
+                            </div>
+                        </>
+                    )
+                }
+                <div>
+                    <button
+                        className="modal__save"
+                        onClick={handleSubmit}>Добавить
+                    </button>
+                </div>
+                <PickerModal
+                    open={pickerOpen}
+                    onClose={() => setPickerOpen(false)}
+                    onSelect={(item) => {
+                        if (item === null) {
+                            setSelectedEntity({ id: "", name: "" });
+                            setPickerOpen(false);
+                        } else {
+                            setSelectedEntity({ id: item.id, name: item.name });
+                            setPickerOpen(false);
+                        }
+                    }}
+                    title={mode === "products" ? "Выберите изделие" : "Выберите ингредиент"}
+                    loadItems={async (params) => {
+                        if (mode === "products") {
+                            return await api.getProducts({
+                                ...params,
+                                factory_id: form?.factory_id
+                            });
+                        } else {
+                            return await api.getIngredients(params);
+                        }
+                    }}
+                    getItems={(data) => {
+                        if (mode === "products") {
+                            return data.products || [];
+                        } else {
+                            return data.ingredients || [];
+                        }
+                    }}
+                    disabledOption={true}
+                />
+            </div>
+        </div>
+
     );
 }
