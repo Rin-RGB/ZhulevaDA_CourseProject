@@ -26,31 +26,41 @@ export default function FactoryModal({
     };
 
     return (
-        <div
-            onClick={(e) =>
-                e.stopPropagation()
-            }
-        >
-            <button onClick={onClose}>
-                ✕
-            </button>
-            <FormField
-                label="Название"
-                name="name"
-                onChange={handleChange}
-                value={form.name}
-                mode='create'
-            />
-            <FormField
-                label="Адрес"
-                name="address"
-                onChange={handleChange}
-                value={form.address}
-                mode='create'
-            />
-            <button onClick={handleSubmit}>
-                Сохранить
-            </button>
+        <div className="modal" onClick={onClose}>
+            <div
+                className="modal__content"
+                onClick={(e) =>
+                    e.stopPropagation()
+                }
+            >
+                <div className="modal__header">
+                    <p className="modal__title">Создание завода</p>
+                    <button
+                        className="modal__close"
+                        onClick={onClose}>
+                        ✕
+                    </button>
+                </div>
+                <FormField
+                    label="Название"
+                    name="name"
+                    onChange={handleChange}
+                    value={form.name}
+                    mode='create'
+                />
+                <FormField
+                    label="Адрес"
+                    name="address"
+                    onChange={handleChange}
+                    value={form.address}
+                    mode='create'
+                />
+                <button
+                    className="modal__save"
+                    onClick={handleSubmit}>
+                    Сохранить
+                </button>
+            </div>
         </div>
     );
 }

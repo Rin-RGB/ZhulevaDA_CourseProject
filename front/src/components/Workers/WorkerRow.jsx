@@ -50,30 +50,28 @@ export default function WorkerRow({
                 })}
             </td>
             <td>
-                <div className="table__buttons">
-                    {
-                        availibleRoles.includes(worker.role) &&
-                        <>
-                            <button className="btn btn--icon"
-                                onClick={() => onEdit(worker)}
-                                title="Редактировать"
-                            >
-                                <i className="bi bi-pencil-fill"></i>
-                            </button>
+                {
+                    availibleRoles.includes(worker.role) &&
+                    <>
+                        <button className="btn btn--icon"
+                            onClick={() => onEdit(worker)}
+                            title="Редактировать"
+                        >
+                            <i className="bi bi-pencil-fill"></i>
+                        </button>
 
-                        </>
-                    }
-                    {
-                        CEOAccess &&
-                        <>
-                            <button className="btn btn--icon btn--danger"
-                                onClick={() => onDelete(worker)}
-                                title="Заблокировать"
-                            >
-                                <i className="bi bi-trash3"></i></button>
-                        </>
-                    }
-                </div>
+                    </>
+                }
+                {
+                    CEOAccess &&
+                    <>
+                        <button className="btn btn--icon btn--danger"
+                            onClick={() => onDelete(worker)}
+                            title="Заблокировать"
+                        >
+                            <i className="bi bi-trash3"></i></button>
+                    </>
+                }
             </td>
         </tr >
     )

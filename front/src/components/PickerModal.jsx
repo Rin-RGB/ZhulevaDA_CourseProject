@@ -7,13 +7,15 @@ export default function PickerModal({
     onClose,
     loadItems,
     getItems,
-    disabledOption = false
+    disabledOption = false,
+    severalOptions = false
 }) {
     const [items, setItems] = useState([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
     const [showLoading, setShowLoading] = useState(false);
     const [pageInput, setPageInput] = useState("1");
+    const [selectedItems, setSelectedItems] = useState([]);
 
     const [pageInfo, setPageInfo] = useState({
         total: 0,
@@ -66,7 +68,6 @@ export default function PickerModal({
         setPage(1);
         setSearch("");
         setPageInput("1");
-
         loadData(0, "");
     }, [open]);
 
@@ -75,6 +76,22 @@ export default function PickerModal({
         setPageInput("1");
         loadData(0, search);
     };
+
+    function toggleItem(item) {
+        setSelectedItems(prev => {
+            const exists = prev.some(
+                selected => selected.id === item.id
+            );
+
+            if (exists) {
+                return prev.filter(
+                    selected => selected.id !== item.id
+                );
+            }
+
+            return [...prev, item];
+        });
+    }
 
     const goToPage = (newPage) => {
         const safePage = Math.max(
@@ -96,7 +113,10 @@ export default function PickerModal({
     return (
         <div
             className="modal"
-            onClick={onClose}
+            onClick={() => {
+                setSelectedItems([]);
+                onClose();
+            }}
         >
             <div
                 className="modal__content--picker"
@@ -106,7 +126,10 @@ export default function PickerModal({
                     <p className="modal__title">{title}</p>
                     <button
                         className="modal__close"
-                        onClick={onClose}>
+                        onClick={() => {
+                            setSelectedItems([]);
+                            onClose();
+                        }}>
                         ✕
                     </button>
                 </div>
@@ -147,13 +170,26 @@ export default function PickerModal({
                     {items.map(item => (
                         <button
                             key={item.id}
-                            className="picker-item"
-                            onClick={() => onSelect(item)}
+                            className={`
+                                picker-item
+                                ${selectedItems.some(selected => selected.id === item.id)
+                                    ? "picker-item--selected"
+                                    : ""
+                                }
+                            `}
+                            onClick={() => {
+                                if (!severalOptions) {
+                                    onSelect(item);
+                                    return;
+                                }
+
+                                toggleItem(item);
+                            }}
                         >
                             {item.name}
                         </button>
                     ))}
-                    {showLoading  && (
+                    {showLoading && (
                         <div className="picker-loading">
                             Загрузка...
                         </div>
@@ -212,6 +248,29 @@ export default function PickerModal({
                             </button>
                         )}
 
+                    </div>
+                )}
+                {severalOptions && (
+                    <div>
+                        <button
+                            className="modal__save--danger"
+                            onClick={() => {
+                                setSelectedItems([]);
+                                onClose();
+                            }}
+                            disabled={selectedItems.length === 0}
+                        >
+                            Отменить
+                        </button>
+                        <button
+                            className="modal__save"
+                            onClick={() => {
+                                onSelect(selectedItems);
+                            }}
+                            disabled={selectedItems.length === 0}
+                        >
+                            Подтвердить ({selectedItems.length})
+                        </button>
                     </div>
                 )}
             </div>

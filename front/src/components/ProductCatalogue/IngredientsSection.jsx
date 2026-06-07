@@ -1,9 +1,14 @@
+import { useEffect, useState } from "react";
+import { api } from "../../api";
+import PickerModal from "../PickerModal";
 export default function IngredientsSection({
     ingredients,
     setIngredients,
-    allIngredients,
     mode
 }) {
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(null);
+
     if (mode !== 'edit' && mode !== 'create') {
         return (
             ingredients.length > 0 ?
@@ -41,7 +46,7 @@ export default function IngredientsSection({
         setIngredients(prev => [
             ...prev,
             {
-                id: allIngredients[0]?.id,
+                id: -1,
                 quantity_kg: 0
             }
         ]);
@@ -53,39 +58,29 @@ export default function IngredientsSection({
                     key={index}
                     className="ingredient-row"
                 >
-                    <select
-                        className="ingredient-row__select"
-                        value={ingredient?.id}
-                        onChange={(e) =>
-                            updateIngredient(
-                                index,
-                                "id",
-                                Number(e.target.value)
-                            )
-                        }
-                    >
-                        {allIngredients.map(item => (
-                            <option
-                                key={item.id}
-                                value={item.id}
-                            >
-                                {item.name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="form-grid">
+                        <button
+                            className="picker-item__result"
+                            onClick={() => {
+                                setPickerOpen(true);
+                                setActiveIndex(index)
+                            }}>
+                            {ingredient.name || ("Выбрать ингредиент")}
+                        </button>
 
-                    <input
-                        className="ingredient-row__input"
-                        type="number"
-                        value={ingredient?.quantity_kg}
-                        onChange={(e) =>
-                            updateIngredient(
-                                index,
-                                "quantity_kg",
-                                Number(e.target.value)
-                            )
-                        }
-                    />
+                        <input
+                            className="ingredient-row__input"
+                            type="number"
+                            value={ingredient?.quantity_kg}
+                            onChange={(e) =>
+                                updateIngredient(
+                                    index,
+                                    "quantity_kg",
+                                    Number(e.target.value)
+                                )
+                            }
+                        />
+                    </div>
 
                     <span className="ingredient-row__unit">
                         кг
@@ -110,6 +105,41 @@ export default function IngredientsSection({
             >
                 + Добавить ингредиент
             </button>
+
+
+            <PickerModal
+                open={pickerOpen}
+                onClose={() => setPickerOpen(false)}
+                onSelect={(item) => {
+                    if (!item) {
+                        setPickerOpen(false);
+                        return;
+                    }
+
+                    setIngredients(prev =>
+                        prev.map((ing, i) =>
+                            i === activeIndex
+                                ? {
+                                    ...ing,
+                                    id: item.id,
+                                    name: item.name
+                                }
+                                : ing
+                        )
+                    );
+
+                    setPickerOpen(false);
+                    setActiveIndex(null);
+                }}
+                title={mode === "products" ? "Выберите изделие" : "Выберите ингредиент"}
+                loadItems={async (params) => {
+                    return await api.getIngredients(params);
+                }}
+                getItems={(data) => {
+                    return data.ingredients || [];
+                }}
+                disabledOption={true}
+            />
         </div>
     );
 }

@@ -624,7 +624,7 @@ router.post('/', async (req, res) => {
             `, [name]);
         if (productExists) return res.status(400).json("Изделие с таким именем уже существует");
 
-        if (isNaN(Number(weight)) || Number(weight) < 0) {
+        if (isNaN(Number(weight)) || Number(weight) <= 0) {
             return res.status(400).json({
                 error: 'Вес должен быть положительным числом'
             });
@@ -702,7 +702,7 @@ router.post('/', async (req, res) => {
                     .trim()
             );
 
-            if (isNaN(quantity) || quantity < 0) {
+            if (isNaN(quantity) || quantity <= 0) {
                 console.log(
                     'Вес ингредиента должен быть положительным числом'
                 );
@@ -971,7 +971,7 @@ router.put('/:id', async (req, res) => {
                 "Изделие с таким именем уже существует"
             );
 
-        if (isNaN(Number(weight)) || Number(weight) < 0) {
+        if (isNaN(Number(weight)) || Number(weight) <= 0) {
             return res.status(400).json({
                 error: 'Вес должен быть положительным числом'
             });
@@ -1002,17 +1002,11 @@ router.put('/:id', async (req, res) => {
                 continue;
             }
             const id = Number(ingredient.id);
-            if (isNaN(Number(ingredient.quantity_kg)) ||
-                Number(ingredient.quantity_kg) < 0) {
-                console.log('Вес ингредиента должен быть положительным числом');
-                console.log(`Ингредиент с id ${ingredient.id} не сущетсвует`);
-                continue;
-            }
             const quantity = Number(ingredient.quantity_kg);
             if (
                 isNaN(id) ||
                 isNaN(quantity) ||
-                quantity < 0
+                quantity <= 0
             ) {
                 continue;
             }

@@ -18,7 +18,7 @@ export default function FactoryRow({ factory, sort, onDelete, CEOAccess, manager
     return (
         <tr>
 
-            <td>
+            <td className="span--title">
                 {factory.name}
             </td>
 
@@ -27,9 +27,9 @@ export default function FactoryRow({ factory, sort, onDelete, CEOAccess, manager
             </td>
 
             <td>
-                <p>CEO: {ceos.join(', ')}</p>
+                <p><span className="span--title">CEO:</span> {ceos.join(', ')}</p>
                 {managers.length > 0 &&
-                    <p>Руководители завода: {managers.join(', ')}</p>
+                    <p><span className="span--title">Руководители завода:</span> {managers.join(', ')}</p>
                 }
             </td>
 
@@ -42,7 +42,7 @@ export default function FactoryRow({ factory, sort, onDelete, CEOAccess, manager
                 }
             }}>
                 {myFactories.some(f => f.id === factory.id) &&
-                    <span>Перейти на страницу завода ↳</span>
+                    <span className="td--link">Перейти на страницу завода ↳</span>
                 }
             </td>
 
@@ -50,7 +50,9 @@ export default function FactoryRow({ factory, sort, onDelete, CEOAccess, manager
                 {sort === "total_value" ? factory.total_value : factory.volume}
             </td>
             {CEOAccess && <td onClick={onDelete}>
-                <i className="bi bi-trash3"></i>
+                <button className="btn btn--icon btn--danger">
+                    <i className="bi bi-trash3"></i>
+                </button>
             </td>}
 
         </tr>

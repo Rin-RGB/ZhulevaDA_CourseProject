@@ -38,13 +38,15 @@ export default function WorkersPage() {
 
     const [CEOAccess, setCEOAccess] = useState(false);
     const [managerAccess, setManagerAccess] = useState(false);
-    const [myFactories, setMyFactories] = useState([])
+    const [myFactories, setMyFactories] = useState([]);
+    const [allMyFactories, setAllMyFactories] = useState([]);
     const [user, setUser] = useState(null);
     const [availibleRoles, setAvailibleRoles] = useState([]);
 
     const loadRole = async () => {
         try {
             const response = await api.getMe();
+            setAllMyFactories(response.factories);
             setMyFactories(response.factories.filter(f => (f.role === 'manager' || f.role === 'ceo')));
             setCEOAccess(response.role === 'ceo');
             setManagerAccess(response.role === 'ceo' || response.role === 'manager');
@@ -228,7 +230,7 @@ export default function WorkersPage() {
             console.error(err.response?.data || err);
         }
     };
-    const groupedFactories = myFactories.reduce((groups, factory) => {
+    const groupedFactories = allMyFactories.reduce((groups, factory) => {
 
         if (!groups[factory.role]) {
             groups[factory.role] = [];
@@ -242,7 +244,7 @@ export default function WorkersPage() {
 
     return (
         <div className="page">
-            <div className="subpage--first">
+            <div className="subpage">
                 <h1 className="page__title">Мой аккаунт</h1>
                 <table className="table">
                     <thead className="table__head">
@@ -268,7 +270,7 @@ export default function WorkersPage() {
 
                                     return (
                                         <div key={role}>
-                                            {roles[role]}: {groupedFactories[role].join(", ")}
+                                            <span className="span--title">{roles[role]}:</span> {groupedFactories[role].join(", ")}
                                         </div>
                                     );
                                 })}
@@ -277,177 +279,176 @@ export default function WorkersPage() {
                     </tbody>
                 </table>
             </div>
-            <div className="subpage">
-                <h1 className="page__title">Сотрудники</h1>
-                <div>
-                    <input
-                        className="input--text"
-                        type="text"
-                        placeholder="Поиск..."
-                        value={searchInput}
-                        onChange={(e) =>
-                            setSearchInput(e.target.value)
-                        }
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                setSearch(searchInput);
-                            }
-                        }}
-                    />
-
-                    <select
-                        className="btn--select"
-                        value={selectedRole}
-
-                        onChange={(e) =>
-                            setSelectedRole(e.target.value)
-                        }
-                    >
-
-                        <option value="">
-                            Все должности
-                        </option>
-                        {
-                            rolesOptions.map(role => (
-                                <option key={role.id} value={role.id}>
-                                    {role.role}
-                                </option>
-                            ))
-                        }
-
-                    </select>
-
-
-                    <select
-                        className="btn--select"
-                        value={selectedFactory}
-
-                        onChange={(e) =>
-                            setSelectedFactory(e.target.value)
-                        }
-                    >
-
-                        <option value="">
-                            Все заводы
-                        </option>
-                        {
-                            myFactories.map(factory => (
-                                <option
-                                    key={factory.id}
-                                    value={factory.id}
-                                >
-                                    {factory.name}
-                                </option>
-                            ))
-                        }
-
-                    </select>
-
-                    <button
-                        className="btn"
-                        onClick={onCreate}
-                    >
-                        {
-                            "Добавить сотрудника"
-                        }
-                    </button>
-                    {
-                        workers.length !== 0 ?
-                            <>
-                                <table className="table">
-                                    <thead className="table__head">
-                                        <tr>
-                                            <th>Почта</th>
-                                            <th>Имя</th>
-                                            <th>Должность</th>
-                                            <th>Работа</th>
-                                            <th>Действия</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody className="table__body">
-                                        {
-                                            workers.filter(worker => (worker.id !== user?.id))
-                                                .map(worker => (
-                                                    <WorkerRow
-                                                        key={worker.id}
-                                                        worker={worker}
-                                                        onEdit={() => onEdit(worker)}
-                                                        onDelete={onDelete}
-                                                        factories={factories}
-                                                        roles={roles}
-                                                        availibleRoles={availibleRoles}
-                                                        CEOAccess={CEOAccess}
-                                                    />
-                                                ))
-                                        }
-
-                                    </tbody>
-
-                                </table>
-                                {pageInfo.totalPages > 1 &&
-                                    <div className="pagination">
-                                        {page > 1 &&
-                                            <button
-                                                className="btn--arrow"
-                                                onClick={async () => {
-                                                    loadWorkers(
-                                                        pageInfo.offset - pageInfo.limit
-                                                    )
-                                                }}>
-                                                {'<'}
-                                            </button>
-                                        }
-                                        <>
-                                            <input
-                                                className="input--page"
-                                                id='pageNum'
-                                                type='number'
-                                                value={pageInput}
-                                                onChange={(e) => {
-                                                    setPageInput(e.target.value);
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key !== "Enter") return;
-
-                                                    let newPage = Number(pageInput);
-
-                                                    if (newPage > pageInfo.totalPages) {
-                                                        newPage = pageInfo.totalPages;
-                                                    }
-
-                                                    if (newPage < 1) {
-                                                        newPage = 1;
-                                                    }
-
-                                                    loadProducts(
-                                                        pageInfo.limit * (newPage - 1)
-                                                    );
-                                                }}
-                                            >
-                                            </input>
-                                            {" / "}{pageInfo.totalPages}
-                                        </>
-
-                                        {page < pageInfo.totalPages &&
-                                            <button
-                                                className="btn--arrow"
-                                                onClick={async () => {
-                                                    loadWorkers(
-                                                        pageInfo.offset + pageInfo.limit
-                                                    )
-                                                }}>
-                                                {'>'}
-                                            </button>
-                                        }
-                                    </div>
-                                }
-                            </>
-                            :
-                            <h2>Нет работников</h2>
+            <h1 className="page__title">Сотрудники</h1>
+            <div>
+                <input
+                    className="input--text"
+                    type="text"
+                    placeholder="Поиск..."
+                    value={searchInput}
+                    onChange={(e) =>
+                        setSearchInput(e.target.value)
                     }
-                </div>
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            setSearch(searchInput);
+                        }
+                    }}
+                />
+
+                <select
+                    className="btn--select"
+                    value={selectedRole}
+
+                    onChange={(e) =>
+                        setSelectedRole(e.target.value)
+                    }
+                >
+
+                    <option value="">
+                        Все должности
+                    </option>
+                    {
+                        rolesOptions.map(role => (
+                            <option key={role.id} value={role.id}>
+                                {role.role}
+                            </option>
+                        ))
+                    }
+
+                </select>
+
+
+                <select
+                    className="btn--select"
+                    value={selectedFactory}
+
+                    onChange={(e) =>
+                        setSelectedFactory(e.target.value)
+                    }
+                >
+
+                    <option value="">
+                        Все заводы
+                    </option>
+                    {
+                        myFactories.map(factory => (
+                            <option
+                                key={factory.id}
+                                value={factory.id}
+                            >
+                                {factory.name}
+                            </option>
+                        ))
+                    }
+
+                </select>
+
+                <button
+                    className="btn"
+                    onClick={onCreate}
+                >
+                    {
+                        "Добавить сотрудника"
+                    }
+                </button>
             </div>
+
+            {
+                workers.length !== 0 ?
+                    <>
+                        <table className="table">
+                            <thead className="table__head">
+                                <tr>
+                                    <th>Почта</th>
+                                    <th>Имя</th>
+                                    <th>Должность</th>
+                                    <th>Работа</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+
+                            <tbody className="table__body">
+                                {
+                                    workers.filter(worker => (worker.id !== user?.id))
+                                        .map(worker => (
+                                            <WorkerRow
+                                                key={worker.id}
+                                                worker={worker}
+                                                onEdit={() => onEdit(worker)}
+                                                onDelete={onDelete}
+                                                factories={factories}
+                                                roles={roles}
+                                                availibleRoles={availibleRoles}
+                                                CEOAccess={CEOAccess}
+                                            />
+                                        ))
+                                }
+
+                            </tbody>
+
+                        </table>
+                        {pageInfo.totalPages > 1 &&
+                            <div className="pagination">
+                                {page > 1 &&
+                                    <button
+                                        className="btn--arrow"
+                                        onClick={async () => {
+                                            loadWorkers(
+                                                pageInfo.offset - pageInfo.limit
+                                            )
+                                        }}>
+                                        {'<'}
+                                    </button>
+                                }
+                                <>
+                                    <input
+                                        className="input--page"
+                                        id='pageNum'
+                                        type='number'
+                                        value={pageInput}
+                                        onChange={(e) => {
+                                            setPageInput(e.target.value);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key !== "Enter") return;
+
+                                            let newPage = Number(pageInput);
+
+                                            if (newPage > pageInfo.totalPages) {
+                                                newPage = pageInfo.totalPages;
+                                            }
+
+                                            if (newPage < 1) {
+                                                newPage = 1;
+                                            }
+
+                                            loadProducts(
+                                                pageInfo.limit * (newPage - 1)
+                                            );
+                                        }}
+                                    >
+                                    </input>
+                                    {" / "}{pageInfo.totalPages}
+                                </>
+
+                                {page < pageInfo.totalPages &&
+                                    <button
+                                        className="btn--arrow"
+                                        onClick={async () => {
+                                            loadWorkers(
+                                                pageInfo.offset + pageInfo.limit
+                                            )
+                                        }}>
+                                        {'>'}
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </>
+                    :
+                    <h2>Нет работников</h2>
+            }
             {modalOpen &&
                 <WorkerModal
                     open={modalOpen}

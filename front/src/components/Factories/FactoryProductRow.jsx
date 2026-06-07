@@ -23,8 +23,13 @@ export default function FactoryProductRow({ sort, product, onDelete, onClick, di
             </td>
             {
                 !disabledFields &&
-                <td onClick={onDelete}>
-                    <i className="bi bi-trash3"></i>
+                <td>
+                    <button
+                        className="btn btn--icon btn--danger"
+                        onClick={onDelete}>
+                        <i className="bi bi-trash3"></i>
+                    </button>
+
                 </td>
             }
             <style>

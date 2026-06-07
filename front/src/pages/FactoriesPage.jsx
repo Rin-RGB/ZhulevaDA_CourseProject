@@ -28,7 +28,7 @@ export default function FactoriesPage() {
             const data = await api.getFactories({
                 sort
             });
-            setFactories(data);            
+            setFactories(data);
         } catch (err) {
             console.error(err);
             setError("Ошибка загрузки заводов");
@@ -97,13 +97,14 @@ export default function FactoriesPage() {
     };
 
     return (
-        <div>
+        <div className="page">
 
-            <h1>Заводы</h1>
+            <h1 className="page__title">Заводы</h1>
 
             <div>
 
                 <button
+                    className="btn--toggle"
                     onClick={() => {
                         setSort(prev =>
                             prev === "total_value"
@@ -120,6 +121,7 @@ export default function FactoriesPage() {
                 </button>
 
                 {CEOAccess && <button
+                    className="btn"
                     onClick={onCreate}
                 >
                     {
@@ -133,8 +135,8 @@ export default function FactoriesPage() {
             {
                 factories.length !== 0 ?
 
-                    <table border="1" cellPadding="10">
-                        <thead>
+                    <table className="table">
+                        <thead className="table__head">
                             <tr>
                                 <th>Название</th>
                                 <th>Адрес</th>
@@ -145,7 +147,7 @@ export default function FactoriesPage() {
                             </tr>
                         </thead>
 
-                        <tbody>
+                        <tbody className="table_body">
                             {
                                 factories.map(factory => (
                                     <FactoryRow

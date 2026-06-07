@@ -21,14 +21,9 @@ export default function ProductModal({
 }) {
 
     const [loading, setLoading] = useState(true);
-
     const [ingredients, setIngredients] = useState([]);
-    const [allIngredients, setAllIngredients] = useState([]);
-
     const [selectedFactories, setSelectedFactories] = useState([]);
-
     const [profit, setProfit] = useState("");
-
     const [form, setForm] = useState({
         name: "",
         price: "",
@@ -84,7 +79,6 @@ export default function ProductModal({
         const ingredients = await api.getIngredients();
         const factories = await api.getFactories();
 
-        setAllIngredients(ingredients.ingredients || []);
     }
 
     useEffect(() => {
@@ -214,7 +208,6 @@ export default function ProductModal({
                 <IngredientsSection
                     ingredients={ingredients}
                     setIngredients={setIngredients}
-                    allIngredients={allIngredients}
                     mode={modalMode}
                 />
 
@@ -249,7 +242,7 @@ export default function ProductModal({
                     <>
                         {CEOAccess && (
                             <div>
-                                <button className="btn"
+                                <button className="modal__save"
                                     onClick={onEdit}>Редактировать</button>
                                 <button className="modal__save--danger" onClick={handleDelete}>Удалить</button>
                             </div>
@@ -257,6 +250,7 @@ export default function ProductModal({
                     </>
                 }
             </div>
+            
         </div>
     );
 }

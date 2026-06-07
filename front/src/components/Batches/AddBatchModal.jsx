@@ -217,7 +217,7 @@ export default function AddBatchModal({
                         setSelectedEntity({ id: "", name: "" });
                         setPickerOpen(false);
                     } else {
-                        setSelectedEntity({ id: item.id, name: item.name });  // ← сохраняем оба
+                        setSelectedEntity({ id: item.id, name: item.name });
                         setPickerOpen(false);
                     }
                 }}

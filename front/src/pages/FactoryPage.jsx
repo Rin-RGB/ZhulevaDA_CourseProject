@@ -4,7 +4,7 @@ import { api } from "../api/index";
 
 import FormField from "../components/FormField";
 import FactoryProductRow from "../components/Factories/FactoryProductRow";
-import AddProductModal from "../components/Factories/AddProductModal";
+import PickerModal from "../components/PickerModal";
 
 export default function FactoryPage() {
 
@@ -200,180 +200,253 @@ export default function FactoryPage() {
         loadFactory();
     }
     const addProduct = async (products) => {
-        console.log(managerAccess,)
         if (!managerAccess) {
             window.alert('Вы не можете добавить изделие на завод');
             return;
         }
-        for (const productId of products) {
-            await api.addProductToFactory(id, productId);
+
+        try {
+            for (const productId of products) {
+                await api.addProductToFactory(id, productId);
+            }
+
+            await loadProducts();
+            await loadFactory();
+
+            setModalOpen(false);
+        } catch (err) {
+            console.error(err);
+            window.alert('Ошибка при добавлении изделий');
         }
-        loadProducts();
-        loadFactory();
-        setModalOpen(false);
-        window.alert('Изделия добавлены')
-    }
+    };
     return (
         <div>
-            <button onClick={() => navigate(`/factories`)}>
-                ← Назад
-            </button>
-            <FormField
-                label="Название"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                mode={mode}
-                labelRequired={false}
-            />
-            <FormField
-                label="Адрес"
-                name="address"
-                value={form.address}
-                onChange={handleChange}
-                mode={mode}
-            />
-            {mode === 'edit' ?
-                <button onClick={() => setMode('read')}>Отменить</button>
-                :
-                <button onClick={() => setMode('edit')}>Редактировать</button>
-            }
-            {mode === 'edit' &&
-                <button onClick={() => {
-                    onEdit(form);
-                    setMode('read');
-                }
-                }>Сохранить</button>}
+            <div className="page">
+                <div className="factory-header">
 
-            <h1>Изделия завода</h1>
-            <p>Сумма изделий: {factory.total_value}</p>
 
-            <input
-                type="text"
-                placeholder="Поиск..."
-                value={searchInput}
-                onChange={(e) =>
-                    setSearchInput(e.target.value)
-                }
-                onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                        setSearch(searchInput);
-                    }
-                }}
-            />
+                    <div className="factory-header__info">
 
-            <button
-                onClick={() => {
-                    setSort(prev =>
-                        prev === "profit"
-                            ? "ingredients"
-                            : "profit"
-                    );
-                }}
-            >
-                {
-                    sort === "profit"
-                        ? "Сортировать по ингредиентам"
-                        : "Сортировать по прибыли"
-                }
-            </button>
-            {
-                products.length !== 0 ?
-                    <>
-                        <table border="1" cellPadding="10">
-                            <thead>
-                                <tr>
-                                    <th>Название</th>
-                                    <th>Вес</th>
-                                    <th>Цена</th>
-                                    <th>Срок годности</th>
-                                    <th>{sort === "profit" ? "Прибыль" : "Ингредиенты"}</th>
-                                    <th>Удалить с завода</th>
-                                </tr>
-                            </thead>
+                        {mode === "edit" ? (
+                            <>
+                                <label htmlFor="factory_name">Название:</label>
+                                <input
+                                    id="factory_name"
+                                    className="search"
+                                    value={form.name}
+                                    onChange={(e) =>
+                                        handleChange("name", e.target.value)
+                                    }
+                                />
+                                <label htmlFor="factory_address">Адрес:</label>
+                                <input
+                                    id="factory_address"
+                                    className="search"
+                                    value={form.address}
+                                    onChange={(e) =>
+                                        handleChange("address", e.target.value)
+                                    }
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <h1 className="page__title">
+                                    {form.name}
+                                </h1>
 
-                            <tbody>
-                                {
-                                    products.map(product => (
-                                        <FactoryProductRow
-                                            key={product.id}
-                                            onDelete={() => onDelete(product.id, id)}
-                                            onClick={() => { }}
-                                            product={product}
-                                            sort={sort}
-                                        />
-                                    ))
-                                }
+                                <p>{form.address}</p>
+                            </>
+                        )}
 
-                            </tbody>
+                    </div>
 
-                        </table>
-                        {pageInfo.totalPages > 1 &&
-                            <div>
-                                {page > 1 &&
-                                    <button onClick={async () => {
-                                        loadProducts(
-                                            pageInfo.offset - pageInfo.limit
-                                        )
-                                    }}>
-                                        {'<'}
-                                    </button>
-                                }
-                                <>
-                                    <input
-                                        id='pageNum'
-                                        type='number'
-                                        value={pageInput}
-                                        onChange={(e) => {
-                                            setPageInput(e.target.value);
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key !== "Enter") return;
-                                            let newPage = Number(pageInput);
+                    <div className="factory-header__actions">
 
-                                            if (newPage > pageInfo.totalPages) {
-                                                newPage = pageInfo.totalPages;
-                                            }
+                        {mode === "edit" ? (
+                            <>
+                                <button
+                                    className="btn btn--danger"
+                                    onClick={() => setMode("read")}
+                                >
+                                    Отменить
+                                </button>
 
-                                            if (newPage < 1) {
-                                                newPage = 1;
-                                            }
+                                <button
+                                    className="btn"
+                                    onClick={() => {
+                                        onEdit(form);
+                                        setMode("read");
+                                    }}
+                                >
+                                    Сохранить
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                className="btn"
+                                onClick={() => setMode("edit")}
+                            >
+                                Редактировать
+                            </button>
+                        )}
 
-                                            loadProducts(
-                                                pageInfo.limit * (newPage - 1)
-                                            );
-                                        }}
-                                    >
-                                    </input>
-                                    {" / "}{pageInfo.totalPages}
-                                </>
+                    </div>
 
-                                {page < pageInfo.totalPages &&
-                                    <button onClick={async () => {
-                                        loadProducts(
-                                            pageInfo.offset + pageInfo.limit
-                                        )
-                                    }}>
-                                        {'>'}
-                                    </button>
-                                }
-                            </div>
+                </div>
+
+                <h1 className="page__title">Изделия завода</h1>
+                <p className="sumProduct">Сумма изделий: {factory.total_value}</p>
+                <div>
+                    <input className="search"
+                        type="text"
+                        placeholder="Поиск..."
+                        value={searchInput}
+                        onChange={(e) =>
+                            setSearchInput(e.target.value)
                         }
-                    </>
-                    :
-                    <h2>Нет изделий</h2>
-            }
-            <button onClick={() => setModalOpen(true)}>
-                Добавить изделие +
-            </button>
-            {modalOpen && (
-                <AddProductModal
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                setSearch(searchInput);
+                            }
+                        }}
+                    />
+
+                    <button
+                        className="btn--toggle"
+                        onClick={() => {
+                            setSort(prev =>
+                                prev === "profit"
+                                    ? "ingredients"
+                                    : "profit"
+                            );
+                        }}
+                    >
+                        {
+                            sort === "profit"
+                                ? "Сортировать по ингредиентам"
+                                : "Сортировать по прибыли"
+                        }
+                    </button>
+                    <button
+                        className="btn"
+                        onClick={() => setModalOpen(true)}>
+                        Добавить изделие +
+                    </button>
+                </div>
+                {
+                    products.length !== 0 ?
+                        <>
+                            <table className="table">
+                                <thead className="table__head">
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Вес</th>
+                                        <th>Цена</th>
+                                        <th>Срок годности</th>
+                                        <th>{sort === "profit" ? "Прибыль" : "Ингредиенты"}</th>
+                                        <th>Удалить с завода</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody className="table_body">
+                                    {
+                                        products.map(product => (
+                                            <FactoryProductRow
+                                                key={product.id}
+                                                onDelete={() => onDelete(product.id, id)}
+                                                onClick={() => { }}
+                                                product={product}
+                                                sort={sort}
+                                            />
+                                        ))
+                                    }
+
+                                </tbody>
+
+                            </table>
+                            {pageInfo.totalPages > 1 &&
+                                <div>
+                                    {page > 1 &&
+                                        <button
+                                            className="pagination__btn"
+                                            onClick={async () => {
+                                                loadProducts(
+                                                    pageInfo.offset - pageInfo.limit
+                                                )
+                                            }}>
+                                            {'<'}
+                                        </button>
+                                    }
+                                    <>
+                                        <input
+                                            className="pagination__input"
+                                            id='pageNum'
+                                            type='number'
+                                            value={pageInput}
+                                            onChange={(e) => {
+                                                setPageInput(e.target.value);
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key !== "Enter") return;
+                                                let newPage = Number(pageInput);
+
+                                                if (newPage > pageInfo.totalPages) {
+                                                    newPage = pageInfo.totalPages;
+                                                }
+
+                                                if (newPage < 1) {
+                                                    newPage = 1;
+                                                }
+
+                                                loadProducts(
+                                                    pageInfo.limit * (newPage - 1)
+                                                );
+                                            }}
+                                        >
+                                        </input>
+                                        {" / "}{pageInfo.totalPages}
+                                    </>
+
+                                    {page < pageInfo.totalPages &&
+                                        <button
+                                            className="pagination__btn"
+                                            onClick={async () => {
+                                                loadProducts(
+                                                    pageInfo.offset + pageInfo.limit
+                                                )
+                                            }}>
+                                            {'>'}
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </>
+                        :
+                        <h2>Нет изделий</h2>
+                }
+
+                <PickerModal
                     open={modalOpen}
-                    factoryId={id}
-                    onSubmit={addProduct}
                     onClose={() => setModalOpen(false)}
+                    onSelect={(items) => {
+                        if (items === null || !items?.length) {
+                            setModalOpen(false);
+                        } else {
+                            addProduct(items.map(i => i.id));
+                            setModalOpen(false);
+                        }
+                    }}
+                    title={"Выберите изделия"}
+                    loadItems={async (params) => {
+                        return await api.getProducts({not_factory_id:id, ...params});
+                    }}
+                    getItems={(data) => {
+                        return data.products || [];
+                    }}
+                    disabledOption={true}
+                    severalOptions={true}
                 />
-            )}
+            </div >
         </div >
     );
 }
