@@ -147,94 +147,116 @@ export default function ProductModal({
         return null;
     }
 
+    const modalHeader = () => {
+        if (modalMode == 'edit') return 'Редактировать изделие'
+        if (modalMode === 'create') return 'Создать изделие'
+        return 'Изделие'
+    }
+
     return (
-        <div onClick={(e) => e.stopPropagation()}>
+        <div className="modal" onClick={onClose}>
+            <div
+                className="modal__content"
+                onClick={(e) => e.stopPropagation()}>
 
-            <button onClick={onClose}>✕</button>
-
-            <FormField
-                label="Имя"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-
-            <FormField
-                label="Цена"
-                name="price"
-                value={form.price}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-
-            <FormField
-                label="Вес"
-                name="weight"
-                value={form.weight}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-
-            <FormField
-                label="Срок годности"
-                name="expiration_days"
-                value={form.expiration_days}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-
-            {modalMode === "read" && (
-                <p>Прибыль: <span>{profit}</span></p>
-            )}
-
-            <h3>Ингредиенты</h3>
-
-            <IngredientsSection
-                ingredients={ingredients}
-                setIngredients={setIngredients}
-                allIngredients={allIngredients}
-                mode={modalMode}
-            />
-
-            <h3>Заводы</h3>
-
-            <FactoriesSection
-                mode={modalMode}
-                allFactories={allFactories}
-                selectedFactories={selectedFactories}
-                setSelectedFactories={setSelectedFactories}
-            />
-
-            {(modalMode === "edit" || modalMode === "create") && (
-                <>
-                    <button onClick={() => {
-                        if (modalMode === "create") {
-                            onClose();
-                        } else {
-                            onRead();
-                        }
-                    }}>
-                        Отменить
+                <div className="modal__header">
+                    <p className="modal__title">{modalHeader()}</p>
+                    <button
+                        className="modal__close"
+                        onClick={onClose}>
+                        ✕
                     </button>
+                </div>
+                <div className="form-grid">
+                    <FormField
+                        label="Имя"
+                        name="name"
+                        value={form.name}
+                        onChange={handleChange}
+                        mode={modalMode}
+                    />
 
-                    <button onClick={handleSubmit}>
-                        Сохранить
-                    </button>
-                </>
-            )}
+                    <FormField
+                        label="Вес"
+                        name="weight"
+                        value={form.weight}
+                        onChange={handleChange}
+                        mode={modalMode}
+                        type="number"
+                    />
 
-            {modalMode === "read" &&
-                <>
-                    {CEOAccess && (
-                        <>
-                            <button onClick={onEdit}>Редактировать</button>
-                            <button onClick={handleDelete}>Удалить</button>
-                        </>
-                    )}
-                    <button onClick={onClose}>Закрыть</button>
-                </>
-            }
+                    <FormField
+                        label="Цена"
+                        name="price"
+                        value={form.price}
+                        onChange={handleChange}
+                        mode={modalMode}
+                        type="number"
+                    />
+
+                    <FormField
+                        label="Срок годности"
+                        name="expiration_days"
+                        value={form.expiration_days}
+                        onChange={handleChange}
+                        mode={modalMode}
+                        type="number"
+                    />
+                </div>
+                {modalMode === "read" && (
+                    <p>
+                        Прибыль: <span>{profit}</span>
+                    </p>
+                )}
+
+                <h3 className="modal__section-title">Ингредиенты</h3>
+
+                <IngredientsSection
+                    ingredients={ingredients}
+                    setIngredients={setIngredients}
+                    allIngredients={allIngredients}
+                    mode={modalMode}
+                />
+
+                <h3 className="modal__section-title">Заводы</h3>
+
+                <FactoriesSection
+                    mode={modalMode}
+                    allFactories={allFactories}
+                    selectedFactories={selectedFactories}
+                    setSelectedFactories={setSelectedFactories}
+                />
+
+                {(modalMode === "edit" || modalMode === "create") && (
+                    <div>
+                        <button className="modal__save--danger" onClick={() => {
+                            if (modalMode === "create") {
+                                onClose();
+                            } else {
+                                onRead();
+                            }
+                        }}>
+                            Отменить
+                        </button>
+
+                        <button className="modal__save" onClick={handleSubmit}>
+                            Сохранить
+                        </button>
+                    </div>
+                )}
+
+                {modalMode === "read" &&
+                    <>
+                        {CEOAccess && (
+                            <div>
+                                <button className="btn"
+                                    onClick={onEdit}>Редактировать</button>
+                                <button className="modal__save--danger" onClick={handleDelete}>Удалить</button>
+                            </div>
+                        )}
+                    </>
+                }
+            </div>
         </div>
     );
 }

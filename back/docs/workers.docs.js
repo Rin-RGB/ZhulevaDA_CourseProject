@@ -248,7 +248,6 @@
  *               - email
  *               - name
  *               - last_name
- *               - factories
  *
  *             properties:
  *               email:
@@ -260,21 +259,6 @@
  *
  *               last_name:
  *                 type: string
- *
- *               factories:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required:
- *                     - id
- *                     - role
- *
- *                   properties:
- *                     id:
- *                       type: integer
- *
- *                     role:
- *                       $ref: '#/components/schemas/FactoryRole'
  *
  *     responses:
  *       200:
@@ -323,4 +307,121 @@
  *
  *       404:
  *         description: Сотрудник не найден
+ */
+
+/**
+ * @swagger
+ * /api/workers/{id}/factories:
+ *   post:
+ *     tags:
+ *       - Workers
+ *
+ *     summary: Добавить сотрудника на завод
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               factory_id:
+ *                 type: integer
+ *               role:
+ *                 type: string
+ *                 enum:
+ *                   - worker
+ *                   - manager
+ *
+ *     responses:
+ *       201:
+ *         description: Завод добавлен
+ *
+ *       400:
+ *         description: Некорректные данные
+ *
+ *       403:
+ *         description: Нет доступа к заводу
+ *
+ *       404:
+ *         description: Сотрудник не найден
+ */
+
+/**
+ * @swagger
+ * /api/workers/{id}/factories/{factoryId}:
+ *   delete:
+ *     tags:
+ *       - Workers
+ *
+ *     summary: Удалить сотрудника с завода
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *
+ *       - in: path
+ *         name: factoryId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *
+ *     responses:
+ *       204:
+ *         description: Связь удалена
+ *
+ *       404:
+ *         description: Связь не найдена
+ */
+/**
+ * @swagger
+ * /api/workers/{id}/factories/{factoryId}:
+ *   patch:
+ *     tags:
+ *       - Workers
+ *
+ *     summary: Изменить роль сотрудника на заводе
+ *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *
+ *       - in: path
+ *         name: factoryId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum:
+ *                   - worker
+ *                   - manager
+ *
+ *     responses:
+ *       200:
+ *         description: Роль обновлена
+ *
+ *       404:
+ *         description: Связь не найдена
  */

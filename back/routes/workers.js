@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const validator = require('validator');
+const { buildFactoryFilter } = require('../middleware/scope');
 
 const {
     query,
@@ -81,7 +82,7 @@ async function elementExists(table, id) {
     ];
 
     if (!allowedTables.includes(table)) {
-        const err = new Error('Неверное название таблицы');
+        const err = new Error(`Неверное название таблицы: ${table}`);
         err.status = 400;
         throw err;
     }
@@ -92,6 +93,332 @@ async function elementExists(table, id) {
         WHERE id = ?
     `, [id]);
 }
+
+async function canManageWorker(
+    currentUserId,
+    targetUserId,
+    factoryId
+) {
+
+    if (currentUserId === targetUserId) {
+        return false;
+    }
+
+    const relation = await queryOne(`
+        SELECT
+            my.factory_id,
+
+            my.role     AS my_role,
+            target.role AS target_role
+
+        FROM factory_worker my
+
+        JOIN factory_worker target
+            ON target.factory_id = my.factory_id
+
+        WHERE my.worker_id = ?
+        AND target.worker_id = ?
+        AND my.factory_id = ?
+    `, [
+        currentUserId,
+        targetUserId,
+        factoryId
+    ]);
+    if (relation.my_role === 'ceo') { return true }
+    if (
+        rolesPriority[relation.my_role] >
+        rolesPriority[relation.target_role]
+    ) {
+        return true;
+    }
+    return false;
+}
+
+router.post('/:id/factories', async (req, res) => {
+
+    try {
+
+        const workerId = checkId(req.params.id);
+        const factoryId = checkId(req.body.factory_id);
+        const role = req.body.role;
+
+        if (workerId === req.user.id) {
+            return res.status(400).json({ error: 'Нельзя изменять свой аккаунт' });
+        }
+
+        if (
+            workerId === null ||
+            factoryId === null ||
+            !['ceo', 'manager', 'worker'].includes(role)
+        ) {
+            return res.status(400).json({
+                error: 'Некорректные данные'
+            });
+        }
+
+        const workerExists =
+            await elementExists('workers', workerId);
+
+        if (!workerExists) {
+            return res.status(404).json({
+                error: 'Сотрудник не найден'
+            });
+        }
+
+        const scope = buildFactoryFilter(
+            'f.id',
+            req.scope.factoryIds
+        );
+
+        const factoryExists = await queryOne(`
+            SELECT f.id
+            FROM factories f
+            WHERE f.id = ?
+            AND ${scope.sql}
+        `, [
+            factoryId,
+            ...scope.params
+        ]);
+
+        if (!factoryExists) {
+            return res.status(403).json({
+                error: 'Нет доступа к заводу или его не существует'
+            });
+        }
+        const userRole = await queryOne(`
+            SELECT role
+            FROM factory_worker
+            WHERE worker_id = ? 
+            AND factory_id = ?
+        `, [req.user.id, factoryId]);
+
+        if (rolesPriority[userRole.role] <= rolesPriority[role] && userRole.role !== 'ceo') {
+            return res.status(403).json({ error: 'У вас нет доступа к этому действию' })
+        }
+
+        const relation = await queryOne(`
+            SELECT 1
+            FROM factory_worker
+            WHERE worker_id = ?
+            AND factory_id = ?
+        `, [
+            workerId,
+            factoryId
+        ]);
+
+        if (relation) {
+            return res.status(400).json({
+                error: 'Сотрудник уже привязан'
+            });
+        }
+
+        await runQuery(`
+            INSERT INTO factory_worker (
+                worker_id,
+                factory_id,
+                role
+            )
+            VALUES (?, ?, ?)
+        `, [
+            workerId,
+            factoryId,
+            role
+        ]);
+
+        res.status(201).json({
+            message: 'Завод добавлен'
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            error: 'Ошибка добавления завода'
+        });
+    }
+});
+
+router.delete('/:id/factories/:factoryId', async (req, res) => {
+
+    try {
+
+        const workerId = checkId(req.params.id);
+        const factoryId = checkId(req.params.factoryId);
+
+        if (workerId === req.user.id) {
+            return res.status(400).json({ error: 'Нельзя изменять свой аккаунт' });
+        }
+
+        if (
+            workerId === null ||
+            factoryId === null
+        ) {
+            return res.status(400).json({
+                error: 'Некорректные данные'
+            });
+        }
+
+        const scope = buildFactoryFilter(
+            'f.id',
+            req.scope.factoryIds
+        );
+
+        const factoryExists = await queryOne(`
+            SELECT f.id
+            FROM factories f
+            WHERE f.id = ?
+            AND ${scope.sql}
+        `, [
+            factoryId,
+            ...scope.params
+        ]);
+
+        if (!factoryExists) {
+            return res.status(403).json({
+                error: 'Нет доступа к заводу или завод не существует'
+            });
+        }
+
+        const manageAccess = await canManageWorker(req.user.id, workerId, factoryId);
+        if (!manageAccess) {
+            return res.status(403).json({ error: 'У вас нет доступа к этому действию' })
+        }
+
+        const relation = await queryOne(`
+            SELECT 1
+            FROM factory_worker
+            WHERE worker_id = ?
+            AND factory_id = ?
+        `, [
+            workerId,
+            factoryId
+        ]);
+
+        if (!relation) {
+            return res.status(404).json({
+                error: 'Связь не найдена'
+            });
+        }
+
+        await runQuery(`
+            DELETE FROM factory_worker
+            WHERE worker_id = ?
+            AND factory_id = ?
+        `, [
+            workerId,
+            factoryId
+        ]);
+
+        res.sendStatus(204);
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            error: 'Ошибка удаления завода'
+        });
+    }
+});
+
+router.patch('/:id/factories/:factoryId', async (req, res) => {
+
+    try {
+
+        const workerId = checkId(req.params.id);
+        const factoryId = checkId(req.params.factoryId);
+        const role = req.body.role;
+
+        if (workerId === req.user.id) {
+            return res.status(400).json({ error: 'Нельзя изменять свой аккаунт' });
+        }
+
+        if (
+            workerId === null ||
+            factoryId === null ||
+            !['ceo', 'manager', 'worker'].includes(role)
+        ) {
+            return res.status(400).json({
+                error: 'Некорректные данные'
+            });
+        }
+
+        const scope = buildFactoryFilter(
+            'f.id',
+            req.scope.factoryIds
+        );
+
+        const factoryExists = await queryOne(`
+            SELECT f.id
+            FROM factories f
+            WHERE f.id = ?
+            AND ${scope.sql}
+        `, [
+            factoryId,
+            ...scope.params
+        ]);
+
+        if (!factoryExists) {
+            return res.status(403).json({
+                error: 'Нет доступа к заводу или завод не существует'
+            });
+        }
+        const userRole = await queryOne(`
+            SELECT role
+            FROM factory_worker
+            WHERE worker_id = ? 
+            AND factory_id = ?
+        `, [req.user.id, factoryId]);
+
+        if (rolesPriority[userRole.role] <= rolesPriority[role] && userRole.role !== 'ceo') {
+            return res.status(403).json({ error: 'У вас нет доступа к этому действию' })
+        }
+        const manageAccess = await canManageWorker(req.user.id, workerId, factoryId);
+        if (!manageAccess) {
+            return res.status(403).json({ error: 'У вас нет доступа к этому действию' })
+        }
+        const relation = await queryOne(`
+            SELECT 1
+            FROM factory_worker
+            WHERE worker_id = ?
+            AND factory_id = ?
+        `, [
+            workerId,
+            factoryId
+        ]);
+
+        if (!relation) {
+            return res.status(404).json({
+                error: 'Связь не найдена'
+            });
+        }
+
+        await runQuery(`
+            UPDATE factory_worker
+            SET role = ?
+            WHERE worker_id = ?
+            AND factory_id = ?
+        `, [
+            role,
+            workerId,
+            factoryId
+        ]);
+
+        res.status(200).json({
+            message: 'Роль обновлена'
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            error: 'Ошибка обновления роли'
+        });
+    }
+});
+
 router.get('/', async (req, res) => {
 
     try {
@@ -102,7 +429,7 @@ router.get('/', async (req, res) => {
         let offset = checkNonNegativeNumber(req.query.offset);
         let factoryId = req.query.factory_id;
 
-        if (limit === null) limit = 10;
+        if (limit === null) limit = 8;
         if (offset === null) offset = 0;
 
         let whereSql = `WHERE 1=1`;
@@ -127,15 +454,16 @@ router.get('/', async (req, res) => {
         }
 
         if (factoryId !== undefined) {
-
             factoryId = checkId(factoryId);
-
             if (factoryId !== null) {
-
                 const factoryExists = await elementExists('factories', factoryId);
-
                 if (factoryExists) {
-                    whereSql += ` AND fw.factory_id = ? `;
+                    whereSql += ` AND EXISTS (
+                        SELECT 1
+                        FROM factory_worker fw
+                        WHERE fw.worker_id = w.id AND
+                        fw.factory_id = ?
+                    )`;
                     params.push(factoryId);
                 }
             }
@@ -146,11 +474,46 @@ router.get('/', async (req, res) => {
             const normalizedRole = role.trim().toLowerCase();
 
             if (validRoles.includes(normalizedRole)) {
-                whereSql += ` AND TRIM(fw.role) = ? `;
+                whereSql += ` 
+                    AND EXISTS (
+                    SELECT 1
+                    FROM factory_worker fw
+                    WHERE fw.worker_id = w.id AND
+                    fw.role = ?
+                )`;
                 params.push(normalizedRole);
             }
         }
 
+        if (factoryId !== undefined && typeof role === "string") {
+            const normalizedRole = role.trim().toLowerCase();
+            factoryId = checkId(factoryId);
+            const factoryExists = await elementExists('factories', factoryId);
+
+            if (validRoles.includes(normalizedRole) &&
+                factoryId != null &&
+                factoryExists
+            ) {
+                whereSql += ` 
+                    AND EXISTS (
+                    SELECT 1
+                    FROM factory_worker fw
+                    WHERE fw.worker_id = w.id AND
+                    fw.role = ? AND
+                    fw.factory_id = ?
+                )`;
+                params.push(normalizedRole, factoryId);
+            }
+        }
+        const scope = buildFactoryFilter('fw.factory_id', req.scope.manageFactories);
+        whereSql += `
+            AND EXISTS (
+            SELECT 1
+            FROM factory_worker fw
+            WHERE fw.worker_id = w.id AND
+            ${scope.sql}
+        )`;
+        params.push(...scope.params);
         const sql = `
             SELECT DISTINCT
                 w.id,
@@ -159,17 +522,13 @@ router.get('/', async (req, res) => {
                 w.last_name,
                 w.is_authorized
             FROM workers w
-            LEFT JOIN factory_worker fw
-                ON fw.worker_id = w.id
             ${whereSql}
             ORDER BY TRIM(w.last_name), TRIM(w.name)
             LIMIT ? OFFSET ?
         `;
 
         const workersParams = [...params, limit, offset];
-
         const workers = await query(sql, workersParams);
-
         for (const worker of workers) {
 
             const factories = await query(`
@@ -249,6 +608,19 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({
                 error: 'Работник не найден'
             });
+        }
+
+        const scope = buildFactoryFilter('fw.factory_id', req.scope.manageFactories);
+        const workerAvailible = await queryOne(` 
+            SELECT 1
+            FROM factory_worker fw
+            WHERE fw.worker_id = ?
+            AND ${scope.sql}
+            LIMIT 1
+        `, [id, ...scope.params])
+
+        if (!workerAvailible) {
+            return res.status(403).json({ error: 'У вас нет доступа к этой информации' });
         }
 
         const worker = await queryOne(`
@@ -360,10 +732,25 @@ router.post('/', async (req, res) => {
             }
             const id = checkId(factory.id);
             const role = factory.role.toLowerCase().trim()
+
+            const userRole = await queryOne(`
+                SELECT role
+                FROM factory_worker
+                WHERE worker_id = ? 
+                AND factory_id = ?
+            `, [req.user.id, factoryId]);
+
+            if (rolesPriority[userRole.role] <= rolesPriority[role] && userRole.role !== 'ceo') {
+                return res.status(403).json({ error: 'У вас нет доступа к этому действию' })
+            }
+
             if (id === null) {
                 continue;
             }
             if (uniqueFactories.has(id)) {
+                continue;
+            }
+            if (!req.scope.manageFactories.includes(factory)) {
                 continue;
             }
             const factoryExists = await queryOne(`
@@ -451,9 +838,12 @@ router.post('/', async (req, res) => {
 
 
 router.put('/:id', async (req, res) => {
-    let transactionStarted = false;
     try {
         const workerId = checkId(req.params.id);
+
+        if (workerId === req.user.id && req.user.role !== 'ceo') {
+            return res.status(400).json({ error: 'Нельзя изменять свой аккаунт' });
+        }
 
         if (workerId === null) {
             return res.status(400).json({ error: "Неверный id" })
@@ -470,14 +860,24 @@ router.put('/:id', async (req, res) => {
             });
         }
 
+        const manageFactories = req.scope.manageFactories;
+        const scope = buildFactoryFilter('fw.factory_id', manageFactories);
+
+        const availibleWorker = queryOne(`
+            SELECT 1 FROM factory_worker fw
+            WHERE fw.worker_id = ?
+            AND ${scope.sql}
+            LIMIT 1
+        `, [workerId, ...scope.params])
+        if (!availibleWorker) {
+            return res.status(403).json({ error: 'У вас нет доступа к этому действию' })
+        }
+
         const {
             email,
             name,
             last_name
         } = req.body;
-        let { factories = [] } = req.body;
-
-
 
         const validatedEmail = checkEmail(email);
         if (!validatedEmail) {
@@ -507,55 +907,6 @@ router.put('/:id', async (req, res) => {
                 error: 'Фамилия обязательна'
             });
         }
-        if (!Array.isArray(factories)) {
-            return res.status(400).json({
-                error: 'Заводы должны быть массивом'
-            });
-        }
-
-        const uniqueFactories = new Set();
-        const validFactories = [];
-        for (const factory of factories) {
-            if (!factory || typeof factory !== 'object') {
-                continue;
-            }
-            if (!factory.role || typeof factory.role !== 'string') {
-                continue;
-            }
-            const id = checkId(factory.id);
-            const role = factory.role.toLowerCase().trim()
-            if (id === null) {
-                continue;
-            }
-            if (uniqueFactories.has(id)) {
-                continue;
-            }
-            const factoryExists = await queryOne(`
-                SELECT id
-                FROM factories
-                WHERE id = ?
-            `, [id]);
-            if (!factoryExists) {
-                continue;
-            }
-            if (!validRoles.includes(role)) {
-                continue;
-            }
-            uniqueFactories.add(id);
-            validFactories.push({
-                id, role
-            });
-        }
-        factories = validFactories;
-
-        if (factories.length === 0) {
-            return res.status(400).json({
-                error: 'Заводы обязательны'
-            });
-        }
-
-        await runQuery(`BEGIN TRANSACTION`);
-        transactionStarted = true;
 
         await runQuery(`
             UPDATE workers
@@ -571,44 +922,12 @@ router.put('/:id', async (req, res) => {
             workerId
         ]);
 
-        // удаляем старые связи
-        await runQuery(`
-            DELETE FROM factory_worker
-            WHERE worker_id = ?
-        `, [workerId]);
-
-        // создаём новые
-        for (const factory of factories) {
-
-            await runQuery(`
-                INSERT INTO factory_worker (
-                    factory_id,
-                    worker_id,
-                    role
-                )
-                VALUES (?, ?, ?)
-            `, [
-                factory.id,
-                workerId,
-                factory.role.toLowerCase().trim()
-            ]);
-        }
-
-        await runQuery(`COMMIT`);
-        transactionStarted = false;
-
         res.json({
             id: workerId,
             message: 'Данные сотрудника обновлены'
         });
 
     } catch (err) {
-        if (transactionStarted) {
-            try {
-                await runQuery(`ROLLBACK`);
-            } catch { }
-        }
-
         console.error(err);
 
         res.status(500).json({
@@ -636,6 +955,20 @@ router.delete('/:id', async (req, res) => {
             return res.status(404).json({
                 error: 'Работник не найден'
             });
+        }
+
+        if (workerId === req.user.id) {
+            return res.status(400).json({ error: 'Нельзя изменять свой аккаунт' });
+        }
+        const scope = buildFactoryFilter('fw.factory_id', req.scope.manageFactories);
+        const availibleWorker = queryOne(`
+            SELECT 1 FROM factory_worker fw
+            WHERE fw.worker_id = ?
+            AND ${scope.sql}
+            LIMIT 1
+        `, [id, ...scope.params])
+        if (!availibleWorker) {
+            return res.status(403).json({ error: 'У вас нет доступа к этому действию' })
         }
 
         await runQuery(`

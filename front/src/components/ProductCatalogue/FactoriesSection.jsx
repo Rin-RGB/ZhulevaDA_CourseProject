@@ -4,7 +4,6 @@ export default function FactoriesSection({
     selectedFactories,
     setSelectedFactories,
 }) {
-
     const selectedIds = new Set(selectedFactories.map(f => f.id));
 
     if (mode !== "edit" && mode !== "create") {

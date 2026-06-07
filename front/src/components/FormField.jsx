@@ -8,7 +8,7 @@ export default function FormField({
     labelRequired = true
 }) {
     return (
-        <div className={`field field-${mode}`}>
+        <div className={`field field-${mode} ${mode === "read" ? "field--readonly" : ""}`}>
             {mode === "read" ? (
                 <>
                     <p className="field-label">{

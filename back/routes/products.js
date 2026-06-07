@@ -1,7 +1,75 @@
 const express = require('express');
 const router = express.Router();
 const { runQuery, query, queryOne } = require('../db/database');
+const { buildFactoryFilter } = require('../middleware/scope');
 
+function checkNumber(num) {
+    if (
+        num === undefined ||
+        num === null ||
+        (typeof num === 'string' && num.trim() === '')
+    ) {
+        return null;
+    }
+
+    const value = Number(num);
+
+    if (Number.isNaN(value)) {
+        return null;
+    }
+
+    return value;
+}
+function checkPositiveNumber(num) {
+    num = checkNumber(num);
+    if (num !== null && num > 0) {
+        return num;
+    }
+    return null;
+}
+
+function checkNonNegativeNumber(num) {
+    const checkedNum = checkNumber(num);
+
+    if (checkedNum !== null && checkedNum >= 0) {
+        return checkedNum;
+    }
+
+    return null;
+}
+
+function checkId(id) {
+    const checkedId = checkNumber(id);
+    if (
+        checkedId === null ||
+        !Number.isInteger(checkedId) ||
+        checkedId < 1
+    ) {
+        return null;
+    }
+    return checkedId;
+}
+
+async function elementExists(table, id) {
+    const allowedTables = [
+        'products',
+        'ingredients',
+        'factories',
+        'factory_product'
+    ];
+
+    if (!allowedTables.includes(table)) {
+        const err = new Error('Неверное название таблицы');
+        err.status = 400;
+        throw err;
+    }
+
+    return await queryOne(`
+        SELECT id
+        FROM ${table}
+        WHERE id = ?
+    `, [id]);
+}
 
 router.get('/:id/ingredients', async (req, res) => {
 
@@ -90,10 +158,13 @@ router.put('/:id/factories', async (req, res) => {
             if (uniqueFactories.has(id)) {
                 continue;
             }
+            if (!req.scope.factoryIds.includes(factory.id)) {
+                continue
+            }
             const factoryExists = await queryOne(`
-                SELECT id
-                FROM factories
-                WHERE id = ?
+                SELECT f.id
+                FROM factories f
+                WHERE f.id = ? 
             `, [id]);
             if (!factoryExists) {
                 continue;
@@ -121,13 +192,11 @@ router.put('/:id/factories', async (req, res) => {
 
         await runQuery('BEGIN TRANSACTION');
 
-        // удаляем старые связи
         await runQuery(`
             DELETE FROM factory_product
             WHERE product_id = ?
         `, [productId]);
 
-        // создаём новые связи
         for (const factory of factories) {
 
             await runQuery(`
@@ -144,7 +213,6 @@ router.put('/:id/factories', async (req, res) => {
 
         await runQuery('COMMIT');
 
-        // получаем обновлённый список заводов
         const updatedFactories = await query(`
             SELECT
                 f.id,
@@ -194,7 +262,6 @@ router.put('/:id/factories', async (req, res) => {
 router.get('/', async (req, res) => {
 
     try {
-
         const {
             factory_id,
             sort,
@@ -203,22 +270,20 @@ router.get('/', async (req, res) => {
             search
         } = req.query;
 
-        let {not_factory_id = null} = req.query;
-        // limit
+        let { not_factory_id = null } = req.query;
+
         if (isNaN(Number(limit)) || Number(limit) < 0) {
             return res.status(400).json({
                 error: 'limit должен быть положительным числом'
             });
         }
 
-        // offset
         if (isNaN(Number(offset)) || Number(offset) < 0) {
             return res.status(400).json({
                 error: 'offset должен быть положительным числом'
             });
         }
 
-        // factory_id
         if (
             factory_id !== undefined &&
             (
@@ -293,6 +358,17 @@ router.get('/', async (req, res) => {
                 console.log("Завода с таким id не существует");
             }
         }
+
+        const scope = buildFactoryFilter('fp.factory_id', req.scope.factoryIds);
+        whereSql += `
+            AND EXISTS (
+                SELECT 1
+                FROM factory_product fp
+                WHERE fp.product_id = p.id
+                AND ${scope.sql}
+            )
+        `;
+        params.push(...scope.params);
 
         let sql = `
             SELECT
@@ -477,7 +553,7 @@ router.get('/:id', async (req, res) => {
             GROUP BY p.id
         `, [productId]);
 
-        
+
         const factories = await query(`
             SELECT
                 f.id,
@@ -590,6 +666,9 @@ router.post('/', async (req, res) => {
             if (uniqueFactories.has(id)) {
                 continue;
             }
+            if (!req.scope.factoryIds.includes(factoryId)) {
+                continue;
+            }
             const factoryExists = await queryOne(`
                 SELECT id
                 FROM factories
@@ -629,7 +708,7 @@ router.post('/', async (req, res) => {
                 );
                 continue;
             }
-            
+
             const ingredientExists = await queryOne(`
                 SELECT id
                 FROM ingredients
@@ -657,8 +736,6 @@ router.post('/', async (req, res) => {
 
         await runQuery('BEGIN TRANSACTION');
 
-
-        // создаём продукт
         const result = await runQuery(`
             INSERT INTO products (
                 name,
@@ -675,7 +752,6 @@ router.post('/', async (req, res) => {
         ]);
         const productId = result.lastID;
 
-        // recipes
         for (const ingredient of ingredients) {
 
             await runQuery(`
@@ -692,8 +768,6 @@ router.post('/', async (req, res) => {
             ]);
         }
 
-
-        // привязка к заводу
         for (const factory of factories) {
             await runQuery(`
                 INSERT INTO factory_product (
@@ -719,7 +793,6 @@ router.post('/', async (req, res) => {
                     WHERE id = ?
                 `, [productId]);
 
-        // прибыль
         const stats = await queryOne(`
             SELECT
 
@@ -863,7 +936,6 @@ router.put('/:id', async (req, res) => {
             });
         }
 
-        // проверяем существование продукта
         const productToUpdate = await queryOne(`
             SELECT id, name
             FROM products
@@ -971,7 +1043,6 @@ router.put('/:id', async (req, res) => {
 
         await runQuery('BEGIN TRANSACTION');
 
-        // обновляем продукт
         await runQuery(`
             UPDATE products
             SET
@@ -1010,7 +1081,6 @@ router.put('/:id', async (req, res) => {
         }
 
         await runQuery('COMMIT');
-        // получаем обновлённый продукт
         const updatedProduct = await queryOne(`
             SELECT
                 id,

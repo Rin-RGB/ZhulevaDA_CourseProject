@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-export default function WorkerRow({ worker, onEdit, onDelete, factories, roles }) {
+export default function WorkerRow({
+    worker,
+    onEdit,
+    onDelete,
+    factories,
+    roles,
+    availibleRoles,
+    CEOAccess
+}) {
     const roleOrder = ["ceo", "manager", "worker"];
 
     const groupedFactories = worker.factories.reduce((groups, factory) => {
@@ -36,23 +44,36 @@ export default function WorkerRow({ worker, onEdit, onDelete, factories, roles }
 
                     return (
                         <div key={role}>
-                            {roles[role]}: {groupedFactories[role].join(", ")}
+                            <span className="span--title">{roles[role]}:</span> {groupedFactories[role].join(", ")}
                         </div>
                     );
                 })}
             </td>
             <td>
-                <button className="btn btn--icon"
-                    onClick={() => onEdit(worker)}
-                    title="Редактировать"
-                >
-                    <i className="bi bi-pencil-fill"></i>
-                </button>
-                <button className="btn btn--icon btn--danger"
-                    onClick={() => onDelete(worker)}
-                    title="Заблокировать"
-                >
-                    <i className="bi bi-trash3"></i></button>
+                <div className="table__buttons">
+                    {
+                        availibleRoles.includes(worker.role) &&
+                        <>
+                            <button className="btn btn--icon"
+                                onClick={() => onEdit(worker)}
+                                title="Редактировать"
+                            >
+                                <i className="bi bi-pencil-fill"></i>
+                            </button>
+
+                        </>
+                    }
+                    {
+                        CEOAccess &&
+                        <>
+                            <button className="btn btn--icon btn--danger"
+                                onClick={() => onDelete(worker)}
+                                title="Заблокировать"
+                            >
+                                <i className="bi bi-trash3"></i></button>
+                        </>
+                    }
+                </div>
             </td>
         </tr >
     )

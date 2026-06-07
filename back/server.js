@@ -6,11 +6,15 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
 const cors = require("cors");
 
+const router = express.Router();
+
+const { authenticateToken } = require("./middleware/auth");
+const { attachScope } = require("./middleware/scope");
+
 const app = express();
 const PORT = 3000;
 
 app.use(cookieParser());
-
 app.use(express.json());
 
 app.use(
@@ -25,7 +29,14 @@ app.use(cors({
 }));
 
 
-// Подключаем маршруты
+const authRouter = require('./routes/auth');
+app.use('/api/auth', authRouter);
+
+
+app.use(authenticateToken);
+app.use(attachScope);
+
+
 const productsRouter = require('./routes/products');
 app.use('/api/products', productsRouter);
 
@@ -40,9 +51,6 @@ app.use('/api/ingredients', ingredientsRouter);
 
 const batchesRouter = require('./routes/batches');
 app.use('/api/batches', batchesRouter);
-
-const authRouter = require('./routes/auth');
-app.use('/api/auth', authRouter);
 
 const meRouter = require('./routes/me');
 app.use('/api/me', meRouter);

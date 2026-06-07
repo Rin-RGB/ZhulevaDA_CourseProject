@@ -1,11 +1,17 @@
 const jwt = require("jsonwebtoken");
-const { queryOne } = require("../db/database");
+const { queryOne, query, runQuery } = require("../db/database");
 
 const ACCESS_SECRET = "access_secret";
 const REFRESH_SECRET = "refresh_secret";
 
 const ACCESS_EXPIRES_IN = "4h";
 const REFRESH_EXPIRES_IN = "7d";
+
+const rolesPriority = {
+    worker: 1,
+    manager: 2,
+    ceo: 3
+};
 
 function generateAccessToken(user) {
     return jwt.sign(
@@ -68,14 +74,15 @@ async function authenticateToken(req, res, next) {
             error: "Недействительный или просроченный токен",
         });
     }
-
     const user = await queryOne(`
-        SELECT
+        SELECT 
         id,
-            email,
-            name,
-            last_name,
-            is_authorized
+        email,
+        name,
+        last_name,
+        hashed_password,
+        is_authorized
+
         FROM workers
         WHERE id = ?
     `, [decoded.sub]);
@@ -85,12 +92,46 @@ async function authenticateToken(req, res, next) {
             error: "Пользователь не найден",
         });
     }
-
     if (!user.is_authorized) {
         return res.status(403).json({
             error: "Пользователь не авторизован",
         });
     }
+
+
+    const factories = await query(`
+            SELECT
+
+                fw.factory_id as id,
+                f.name,
+                fw.role
+
+            FROM factory_worker fw
+            JOIN factories f
+                ON f.id = fw.factory_id
+
+            WHERE fw.worker_id = ?
+        `, [user.id]);
+
+    user.factories = factories;
+    let highestRole = 'worker';
+
+    if (factories.length <= 0) {
+        return res.status(400).json({
+            error: "Пользователь не привязан ни к одному заводу",
+        });
+    }
+
+    for (const f of factories) {
+        if (
+            rolesPriority[f.role] &&
+            rolesPriority[f.role] > rolesPriority[highestRole]
+        ) {
+            highestRole = f.role;
+        }
+    }
+
+    user.role = highestRole;
 
     req.user = user;
     next();

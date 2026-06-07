@@ -8,43 +8,52 @@ import AddProductModal from "../components/Factories/AddProductModal";
 
 export default function FactoryPage() {
 
-    const [myFactories, setMyFactories] = useState([]);
-    const [permissionsLoaded, setPermissionsLoaded] = useState(false);
-
-    const loadRole = async () => {
-        try {
-            const response = await api.getMe();
-
-            setMyFactories(response.factories);
-            setCEOAccess(response.role === 'ceo');
-            setManagerAccess(
-                response.role === 'ceo' ||
-                response.role === 'manager'
-            );
-        } finally {
-            setPermissionsLoaded(true);
-        }
-    };
-    useEffect(() => {
-        loadRole();
-    }, []);
-    useEffect(() => {
-        if (myFactories.length === 0) {
-            return;
-        }
-
-        if (!myFactories.some(f => f.id === Number(id))) {
-            navigate('/factories', {
-                state: {
-                    error: 'У вас нет доступа к этому заводу'
-                }
-            });
-        }
-
-    }, [myFactories])
 
     const { id } = useParams();
     const navigate = useNavigate();
+    const [managerAccess, setManagerAccess] = useState(false);
+
+    function useFactoryAccess(id) {
+        const [myFactories, setMyFactories] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [hasAccess, setHasAccess] = useState(false);
+
+        useEffect(() => {
+            const load = async () => {
+                try {
+                    const res = await api.getMe();
+
+                    const factories = res.factories || [];
+                    setMyFactories(factories);
+
+                    const access = factories.some(
+                        f => f.id === Number(id)
+                    );
+                    const managerAccess = factories.some(
+                        factory =>
+                            factory.id === Number(id) &&
+                            ['manager', 'ceo'].includes(factory.role)
+                    );
+
+                    setManagerAccess(managerAccess);
+                    setHasAccess(access);
+                } catch (err) {
+                    console.error(err);
+                    setHasAccess(false);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            load();
+        }, [id]);
+
+        return { hasAccess, loading };
+    }
+
+    const { hasAccess, loading: permissionsLoading } =
+        useFactoryAccess(id);
+
     const [factory, setFactory] = useState("");
 
     const [form, setForm] = useState({
@@ -67,7 +76,14 @@ export default function FactoryPage() {
     const [modalOpen, setModalOpen] = useState(false);
 
     const [CEOAccess, setCEOAccess] = useState(false);
-    const [managerAccess, setManagerAccess] = useState(false);
+
+    useEffect(() => {
+        if (permissionsLoading) return;
+
+        if (!hasAccess) {
+            navigate("/factories");
+        }
+    }, [permissionsLoading, hasAccess]);
 
     const loadFactory = async () => {
         try {
@@ -116,32 +132,30 @@ export default function FactoryPage() {
         }
     }
 
-
     useEffect(() => {
-        if (!permissionsLoaded) {
-            return;
-        }
+        if (permissionsLoading) return;
+        if (!hasAccess) {
+            navigate("/factories", { replace: true });
+        };
 
-        if (!myFactories.some(f => f.id === Number(id))) {
-            navigate('/factories');
-            return;
-        }
         loadFactory();
-    }, [permissionsLoaded, myFactories, id]);
-    useEffect(() => {
-        if (!permissionsLoaded) {
-            return;
-        }
-
-        if (!myFactories.some(f => f.id === Number(id))) {
-            navigate('/factories');
-            return;
-        }
         loadProducts();
-    }, [search, sort, permissionsLoaded, myFactories, id]);
+    }, [permissionsLoading, hasAccess, id]);
 
-    if (!permissionsLoaded) {
+    useEffect(() => {
+        if (permissionsLoading) return;
+        if (!hasAccess) {
+            navigate("/factories", { replace: true });
+        };
+
+        loadProducts();
+    }, [search, sort]);
+
+    if (permissionsLoading) {
         return <div>Загрузка...</div>;
+    }
+    if (!hasAccess) {
+        return null;
     }
 
     if (loading) {
@@ -186,6 +200,7 @@ export default function FactoryPage() {
         loadFactory();
     }
     const addProduct = async (products) => {
+        console.log(managerAccess,)
         if (!managerAccess) {
             window.alert('Вы не можете добавить изделие на завод');
             return;
@@ -305,7 +320,6 @@ export default function FactoryPage() {
                                     </button>
                                 }
                                 <>
-                                    <label htmlFor="pageNum">Страница: </label>
                                     <input
                                         id='pageNum'
                                         type='number'
@@ -331,6 +345,7 @@ export default function FactoryPage() {
                                         }}
                                     >
                                     </input>
+                                    {" / "}{pageInfo.totalPages}
                                 </>
 
                                 {page < pageInfo.totalPages &&

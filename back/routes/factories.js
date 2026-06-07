@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { buildFactoryFilter } = require('../middleware/scope');
 
 const {
     runQuery,
@@ -139,7 +140,7 @@ router.get('/', async (req, res) => {
                 WHERE fw.factory_id = ?
                 AND fw.role IN ('manager', 'ceo')
             `, [factoryId]);
-            factories.push({...factory, managers});
+            factories.push({ ...factory, managers });
         }
 
         res.json(factories);

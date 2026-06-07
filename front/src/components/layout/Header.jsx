@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 
 export default function Header() {
@@ -7,20 +7,15 @@ export default function Header() {
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const roles = { ceo: 'CEO', manager: 'Руководитель завода', worker: 'Работник' }
+
+    const roles = {
+        ceo: "CEO",
+        manager: "Руководитель завода",
+        worker: "Работник"
+    };
 
     const [CEOAccess, setCEOAccess] = useState(false);
     const [managerAccess, setManagerAccess] = useState(false);
-
-    const loadRole = async () => {
-        try {
-            const response = await api.getMe();
-            setCEOAccess(response.role === 'ceo');
-            setManagerAccess(response.role === 'ceo' || response.role === 'manager');
-        } catch (err) {
-            console.error(err);
-        }
-    };
 
     useEffect(() => {
         const loadUser = async () => {
@@ -33,8 +28,7 @@ export default function Header() {
                 const gotUser = await api.getMe();
                 setUser(gotUser);
             } catch (error) {
-                console.error("Auth error:", error);
-
+                console.error(error);
                 localStorage.removeItem("access_token");
                 setUser(null);
                 navigate("/login");
@@ -45,7 +39,20 @@ export default function Header() {
 
         loadUser();
     }, [navigate]);
+
     useEffect(() => {
+        const loadRole = async () => {
+            try {
+                const response = await api.getMe();
+                setCEOAccess(response.role === "ceo");
+                setManagerAccess(
+                    response.role === "ceo" || response.role === "manager"
+                );
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
         loadRole();
     }, []);
 
@@ -65,39 +72,74 @@ export default function Header() {
     };
 
     return (
-        <header>
-            <nav>
-                <Link to="/">Каталог</Link> |
-                {
-                    managerAccess &&
-                    <>
-                        <Link to="/factories">Заводы</Link> |
-                    </>
-                }
-                {
-                    managerAccess &&
-                    <>
-                        <Link to="/employees">Сотрудники</Link> |
-                    </>
-                }
-                <Link to="/batches">Поставки</Link> |
-                <Link to="/ingredients">Ингредиенты</Link>
+        <header className="header">
+            <nav className="header__nav">
+                <NavLink
+                    to="/"
+                    end
+                    className={({ isActive }) =>
+                        isActive ? "header__link active" : "header__link"
+                    }
+                >
+                    Каталог
+                </NavLink>
+
+                {managerAccess && (
+                    <NavLink
+                        to="/factories"
+                        className={({ isActive }) =>
+                            isActive ? "header__link active" : "header__link"
+                        }
+                    >
+                        Заводы
+                    </NavLink>
+                )}
+
+                {managerAccess && (
+                    <NavLink
+                        to="/employees"
+                        className={({ isActive }) =>
+                            isActive ? "header__link active" : "header__link"
+                        }
+                    >
+                        Сотрудники
+                    </NavLink>
+                )}
+
+                <NavLink
+                    to="/batches"
+                    className={({ isActive }) =>
+                        isActive ? "header__link active" : "header__link"
+                    }
+                >
+                    Поставки
+                </NavLink>
+
+                <NavLink
+                    to="/ingredients"
+                    className={({ isActive }) =>
+                        isActive ? "header__link active" : "header__link"
+                    }
+                >
+                    Ингредиенты
+                </NavLink>
             </nav>
 
-            <div>
+            <div className="header__user">
                 {loading ? (
                     <span>Загрузка...</span>
                 ) : user ? (
                     <>
-                        <span>
-                            {`${user.name} ${user.last_name}: ${roles[user.role]}`}
+                        <span className="header__role">
+                            {user.name} {user.last_name}: {roles[user.role]}
                         </span>
-                        <button onClick={handleLogout}>
+
+                        <button className="btn btn--danger" onClick={handleLogout}>
                             Выйти
                         </button>
                     </>
                 ) : (
-                    <Link to="/login">Войти</Link>
+                    <NavLink to="/login">Войти</NavLink>
                 )}
             </div>
         </header>

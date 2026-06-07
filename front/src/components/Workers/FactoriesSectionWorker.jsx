@@ -2,102 +2,86 @@ export default function FactoriesSectionWorker({
     factories,
     setFactories,
     allFactories,
-    mode,
-    roles
+    roles,
+    canChangeRole = false
 }) {
 
-    const rolesValue = Object.fromEntries(
-        roles.map(role => [role.id, role.role])
-    );
-    function updateFactories(index, field, value) {
+    function toggleFactory(factoryId, checked) {
+        if (checked) {
+            setFactories(prev => [
+                ...prev,
+                {
+                    id: factoryId,
+                    role: "worker"
+                }
+            ]);
+            return;
+        }
+
         setFactories(prev =>
-            prev.map((item, i) =>
-                i === index
-                    ? {
-                        ...item,
-                        [field]: value
-                    }
-                    : item
+            prev.filter(f => f.id !== factoryId)
+        );
+    }
+
+    function updateRole(factoryId, role) {
+        setFactories(prev =>
+            prev.map(f =>
+                f.id === factoryId
+                    ? { ...f, role }
+                    : f
             )
         );
     }
 
-    function removeFactory(index) {
-        setFactories(prev =>
-            prev.filter((_, i) => i !== index)
-        );
-    }
-
-    function addFactory() {
-        setFactories(prev => [
-            ...prev,
-            {
-                id: allFactories[0]?.id ?? "",
-                role: "worker"
-            }
-        ]);
-    }
-
     return (
-        <div>
-            {factories.map((factory, index) => (
-                <div key={index}>
-                    <select
-                        value={factory.id}
-                        onChange={(e) =>
-                            updateFactories(
-                                index,
-                                "id",
-                                Number(e.target.value)
-                            )
-                        }
-                    >
-                        {allFactories.map(item => (
-                            <option
-                                key={item.id}
-                                value={item.id}
+        <div className="factory-section">
+            {allFactories.map(factory => {
+
+                const selected = factories.find(f => f.id === factory.id);
+                const checked = !!selected;
+
+                return (
+                    <div className="factory-item" key={factory.id}>
+                        <label className="factory-label">
+                            <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) =>
+                                    toggleFactory(factory.id, e.target.checked)
+                                }
+                            />
+                            <span className="factory-name">
+                                {factory.name}
+                            </span>
+                        </label>
+
+                        {checked && canChangeRole && (
+                            <select
+                                className="factory-select"
+                                value={selected.role}
+                                onChange={(e) =>
+                                    updateRole(factory.id, e.target.value)
+                                }
                             >
-                                {item.name}
-                            </option>
-                        ))}
-                    </select>
+                                {roles.map(role => (
+                                    <option
+                                        key={role.id}
+                                        value={role.id}
+                                    >
+                                        {role.role}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
 
-                    <select
-                        value={factory.role}
-                        onChange={(e) =>
-                            updateFactories(
-                                index,
-                                "role",
-                                e.target.value
-                            )
-                        }
-                    >
-                        {roles.map(role => (
-                            <option
-                                key={role.id}
-                                value={role.id}
-                            >
-                                {role.role}
-                            </option>
-                        ))}
-                    </select>
-
-                    <button
-                        type="button"
-                        onClick={() => removeFactory(index)}
-                    >
-                        -
-                    </button>
-
-                </div>
-            ))}
-
-            <button
-                type="button"
-                onClick={addFactory}
-            >
-                +
-            </button>
+                        {checked && !canChangeRole && (
+                            <span className="factory-role-readonly">
+                                Работник
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     );
 }

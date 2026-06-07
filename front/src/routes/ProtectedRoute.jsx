@@ -1,5 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { api } from "../api";
+import { useEffect, useState } from "react";
+
 
 export const ProtectedRoute = ({ children }) => {
     if (!api.isAuthenticated()) {
@@ -8,49 +10,44 @@ export const ProtectedRoute = ({ children }) => {
 
     return children;
 };
+export const RoleRoute = ({ children, allowedRoles }) => {
+    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
 
-export const CEORoute = ({ children }) => {
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const me = await api.getMe();
+                setUser(me);
+            } catch {
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        load();
+    }, []);
+
     if (!api.isAuthenticated()) {
         return <Navigate to="/login" replace />;
     }
 
-    try {
-        const token = localStorage.getItem("access_token");
-        const payload = JSON.parse(atob(token.split(".")[1]));
+    if (loading) {
+        return <div>Загрузка...</div>;
+    }
 
-        if (payload.role !== "ceo") {
-            return <Navigate to="/" replace />;
-        }
-    } catch {
+    if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    return children;
-};
-export const CEOorManagerRoute = ({ children }) => {
-    if (!api.isAuthenticated()) {
-        return <Navigate to="/login" replace />;
-    }
-
-    try {
-        const token = localStorage.getItem("access_token");
-        const payload = JSON.parse(atob(token.split(".")[1]));
-
-        if (payload.role !== "ceo" && payload.role !== "manager") {
-            return <Navigate to="/" replace />;
-        }
-    } catch {
-        return <Navigate to="/login" replace />;
+    if (
+        allowedRoles &&
+        !allowedRoles.includes(user.role)
+    ) {
+        return <Navigate to="/" replace />;
     }
 
     return children;
 };
 
-export const RootRedirect = () => {
-    return (
-        <Navigate
-            to={api.isAuthenticated() ? "/" : "/login"}
-            replace
-        />
-    );
-};

@@ -77,6 +77,152 @@ async function elementExists(table, id) {
     `, [id]);
 }
 
+router.get(
+    '/max-production/:factoryId/:productId',
+    async (req, res) => {
+
+        try {
+
+            const factoryId = checkId(req.params.factoryId);
+            const productId = checkId(req.params.productId);
+
+            if (
+                factoryId === null ||
+                productId === null
+            ) {
+                return res.status(400).json({
+                    error: 'Некорректные данные'
+                });
+            }
+            const factoryExists = await elementExists('factories', factoryId);
+
+            if (!factoryExists) {
+                return res.status(404).json({ error: 'Завода не существует' })
+            }
+            const productExists = await elementExists('products', productId);
+
+            if (!productExists) {
+                return res.status(404).json({ error: 'Изделия не существует' })
+            }
+            const relation = await queryOne(`
+                SELECT 1
+                FROM factory_product
+                WHERE factory_id = ?
+                AND product_id = ?
+                LIMIT 1
+            `, [factoryId, productId]);
+
+            if (!relation) {
+                return res.status(400).json({
+                    error: 'Этот продукт нельзя производить на данном заводе'
+                });
+            }
+
+            const recipe = await query(`
+                SELECT
+                    r.ingredient_id,
+                    i.name,
+                    r.quantity_kg
+                FROM recipes r
+
+                JOIN ingredients i
+                    ON i.id = r.ingredient_id
+
+                WHERE r.product_id = ?
+            `, [productId]);
+
+            if (!recipe.length) {
+                return res.status(400).json({
+                    error: 'У продукта нет рецепта'
+                });
+            }
+
+            let maxAmount = Infinity;
+
+            const ingredientsInfo = [];
+
+            for (const ingredient of recipe) {
+
+                const stock = await queryOne(`
+                    SELECT
+                        COALESCE(
+                            SUM(delivery_kg),
+                            0
+                        ) AS available
+                    FROM batch_ingredient
+                    WHERE factory_id = ?
+                    AND ingredient_id = ?
+                    AND expiry_date > DATE('now')
+                    AND delivery_kg > 0
+                `, [
+                    factoryId,
+                    ingredient.ingredient_id
+                ]);
+
+                const available =
+                    Number(stock.available);
+
+                const possible =
+                    Math.floor(
+                        available /
+                        ingredient.quantity_kg
+                    );
+
+                maxAmount = Math.min(
+                    maxAmount,
+                    possible
+                );
+
+                ingredientsInfo.push({
+                    ingredient_id:
+                        ingredient.ingredient_id,
+
+                    ingredient_name:
+                        ingredient.name,
+
+                    required_per_product:
+                        ingredient.quantity_kg,
+
+                    available_kg:
+                        available,
+
+                    possible_products:
+                        possible
+                });
+            }
+
+            res.json({
+                factory_id: factoryId,
+                product_id: productId,
+
+                max_amount:
+                    maxAmount === Infinity
+                        ? 0
+                        : maxAmount,
+
+                limiting_ingredient:
+                    ingredientsInfo
+                        .sort(
+                            (a, b) =>
+                                a.possible_products -
+                                b.possible_products
+                        )[0],
+
+                ingredients:
+                    ingredientsInfo
+            });
+
+        } catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                error:
+                    'Ошибка расчёта максимального производства'
+            });
+        }
+    }
+);
 
 router.get('/', async (req, res) => {
 
@@ -322,7 +468,7 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // 2. проверка + списание ингредиентов (атомарно)
+        // 2. проверка + списание ингредиентов
         for (const r of recipe) {
 
             const needed = r.quantity_kg * amount;

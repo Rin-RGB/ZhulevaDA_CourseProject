@@ -4,13 +4,12 @@ import { api } from "../api/index";
 
 import BatchRow from "../components/Batches/BatchRow";
 import AddBatchModal from "../components/Batches/AddBatchModal";
-import PickerModal from "../components/Batches/PickerModal";
+import PickerModal from "../components/PickerModal";
 
 export default function BatchesPage() {
 
     const [mode, setMode] = useState("products");
     const navigate = useNavigate();
-    // "products" | "ingredients"
 
     const [batches, setBatches] = useState([]);
     const [factories, setFactories] = useState([]);
@@ -20,8 +19,6 @@ export default function BatchesPage() {
     const [selectedFactory, setSelectedFactory] = useState("");
     const [selectedEntity, setSelectedEntity] = useState({ id: "", name: "" });
     const [pickerOpen, setPickerOpen] = useState(false);
-
-    // productId or ingredientId
 
     const [freshOnly, setFreshOnly] = useState(true);
 
@@ -35,8 +32,8 @@ export default function BatchesPage() {
 
 
     const loadFactories = async () => {
-        const data = await api.getFactories();
-        setFactories(data || []);
+        const data = await api.getMe();
+        setFactories(data?.factories || []);
     };
 
     const loadBatches = async (offset = 0) => {

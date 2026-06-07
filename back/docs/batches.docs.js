@@ -165,3 +165,96 @@
  *       404:
  *         description: Партия не найдена
  */
+/**
+ * @swagger
+ * /api/batches/max-production/{factoryId}/{productId}:
+ *   get:
+ *     tags:
+ *       - Batches
+ *
+ *     summary: Рассчитать максимальный возможный выпуск изделия
+ *     description: >
+ *       Рассчитывает, сколько единиц изделия можно произвести на выбранном
+ *       заводе исходя из текущих запасов свежих ингредиентов.
+ *
+ *     parameters:
+ *       - in: path
+ *         name: factoryId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID завода
+ *
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID изделия
+ *
+ *     responses:
+ *       200:
+ *         description: Расчёт выполнен успешно
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 factory_id:
+ *                   type: integer
+ *
+ *                 product_id:
+ *                   type: integer
+ *
+ *                 max_amount:
+ *                   type: integer
+ *                   description: Максимально возможное количество изделий
+ *
+ *                 limiting_ingredient:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     ingredient_id:
+ *                       type: integer
+ *
+ *                     ingredient_name:
+ *                       type: string
+ *
+ *                     required_per_product:
+ *                       type: number
+ *
+ *                     available_kg:
+ *                       type: number
+ *
+ *                     possible_products:
+ *                       type: integer
+ *
+ *                 ingredients:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       ingredient_id:
+ *                         type: integer
+ *
+ *                       ingredient_name:
+ *                         type: string
+ *
+ *                       required_per_product:
+ *                         type: number
+ *
+ *                       available_kg:
+ *                         type: number
+ *
+ *                       possible_products:
+ *                         type: integer
+ *
+ *       400:
+ *         description: Некорректные данные или у изделия отсутствует рецепт
+ *
+ *       404:
+ *         description: Изделие или завод не найдены
+ *
+ *       500:
+ *         description: Ошибка расчёта максимального производства
+ */

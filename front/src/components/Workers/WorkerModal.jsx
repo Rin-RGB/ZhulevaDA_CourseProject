@@ -10,13 +10,15 @@ export default function WorkerModal({
     onSubmit,
     onClose,
     modalMode,
-    roles
+    roles,
+    managerAccess,
+    CEOAccess,
+    myFactories
 }) {
 
     const [loading, setLoading] = useState(true);
 
     const [selectedFactories, setSelectedFactories] = useState([]);
-    const [allFactories, setAllFactories] = useState([]);
 
     const [form, setForm] = useState({
         email: "",
@@ -50,7 +52,6 @@ export default function WorkerModal({
     }
     async function loadData() {
         const factories = await api.getFactories();
-        setAllFactories(factories || []);
     }
     async function handleSubmit() {
         const newWorker = {
@@ -108,46 +109,51 @@ export default function WorkerModal({
     }
 
     return (
-        <div
-            onClick={(e) =>
-                e.stopPropagation()
-            }
-        >
-            <button onClick={onClose}>
-                ✕
-            </button>
-            <FormField
-                label="Почта"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-            <FormField
-                label="Имя"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-            <FormField
-                label="Фамилия"
-                name="last_name"
-                value={form.last_name}
-                onChange={handleChange}
-                mode={modalMode}
-            />
-            <p>Заводы</p>
-            <FactoriesSectionWorker
-                factories={selectedFactories}
-                setFactories={setSelectedFactories}
-                allFactories={allFactories}
-                mode={modalMode}
-                roles={roles}
-            />
-            <button onClick={handleSubmit}>
-                Сохранить
-            </button>
+        <div className="modal" onClick={onClose}>
+            <div
+                className="modal__content"
+                onClick={(e) =>
+                    e.stopPropagation()
+                }
+            >
+                <button
+                    className="modal__close"
+                    onClick={onClose}>
+                    ✕
+                </button>
+                <FormField
+                    label="Почта"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    mode={modalMode}
+                />
+                <FormField
+                    label="Имя"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    mode={modalMode}
+                />
+                <FormField
+                    label="Фамилия"
+                    name="last_name"
+                    value={form.last_name}
+                    onChange={handleChange}
+                    mode={modalMode}
+                />
+                <p className="modal__section-title">Заводы</p>
+                <FactoriesSectionWorker
+                    factories={selectedFactories}
+                    setFactories={setSelectedFactories}
+                    allFactories={myFactories}
+                    roles={roles}
+                    canChangeRole={CEOAccess}
+                />
+                <button className="modal__save" onClick={handleSubmit}>
+                    Сохранить
+                </button>
+            </div>
         </div>
     );
 }

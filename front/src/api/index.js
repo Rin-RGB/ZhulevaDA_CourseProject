@@ -269,6 +269,20 @@ export const api = {
         return response.data;
     },
 
+    addWorkerFactory: async (id, data) => {
+        const response = await apiClient.post(`/workers/${id}/factories`, data);
+        return response.data;
+    },
+
+    deleteWorkerFactory: async (id, factoryId) => {
+        const response = await apiClient.delete(`/workers/${id}/factories/${factoryId}`);
+        return response.data;
+    },
+
+    updateWorkerRole: async (id, factoryId, data) => {
+        const response = await apiClient.patch(`/workers/${id}/factories/${factoryId}`, data);
+        return response.data;
+    },
 
     // INGREDIENTS
 
@@ -332,7 +346,12 @@ export const api = {
     },
 
     getBatchById: async (id) => {
-        const response = await apiClient.get(`/batch/${id}`);
+        const response = await apiClient.get(`/batches/${id}`);
+        return response.data;
+    },
+
+    getMaxProduction: async (factoryId, productId) => {
+        const response = await apiClient.get(`/batches/max-production/${factoryId}/${productId}`,)
         return response.data;
     },
 

@@ -7,14 +7,14 @@ export default function IngredientsSection({
     if (mode !== 'edit' && mode !== 'create') {
         return (
             ingredients.length > 0 ?
-            <ul>
-                {ingredients.map(item => (
-                    <li key={item.id}>
-                        {item.name}: {item.quantity_kg} кг
-                    </li>
-                ))}
-            </ul>
-            : <p>Не добавлен рецепт</p>
+                <ul>
+                    {ingredients.map(item => (
+                        <li key={item.id}>
+                            {item.name}: {item.quantity_kg} кг
+                        </li>
+                    ))}
+                </ul>
+                : <p>Не добавлен рецепт</p>
         );
     }
 
@@ -46,12 +46,15 @@ export default function IngredientsSection({
             }
         ]);
     }
-
     return (
-        <div>
+        <div className="ingredients-section">
             {ingredients.map((ingredient, index) => (
-                <div key={index}>
+                <div
+                    key={index}
+                    className="ingredient-row"
+                >
                     <select
+                        className="ingredient-row__select"
                         value={ingredient?.id}
                         onChange={(e) =>
                             updateIngredient(
@@ -72,6 +75,7 @@ export default function IngredientsSection({
                     </select>
 
                     <input
+                        className="ingredient-row__input"
                         type="number"
                         value={ingredient?.quantity_kg}
                         onChange={(e) =>
@@ -83,22 +87,28 @@ export default function IngredientsSection({
                         }
                     />
 
+                    <span className="ingredient-row__unit">
+                        кг
+                    </span>
+
                     <button
                         type="button"
+                        className="ingredient-row__remove"
                         onClick={() =>
                             removeIngredient(index)
                         }
                     >
-                        -
+                        ✕
                     </button>
                 </div>
             ))}
 
             <button
                 type="button"
+                className="ingredient-add"
                 onClick={addIngredient}
             >
-                +
+                + Добавить ингредиент
             </button>
         </div>
     );

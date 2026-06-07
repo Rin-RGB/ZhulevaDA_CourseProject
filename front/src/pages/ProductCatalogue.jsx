@@ -94,6 +94,30 @@ export default function ProductCatalogue() {
         return <h2>{error}</h2>;
     }
 
+    function diffFactories(oldList, newList) {
+        const oldMap = new Map(oldList.map(f => [f.id, f]));
+        const newMap = new Map(newList.map(f => [f.id, f]));
+
+        const toAdd = [];
+        const toRemove = [];
+
+        for (const old of oldList) {
+            if (!newMap.has(old.id)) {
+                toRemove.push(old);
+            }
+        }
+
+        for (const nw of newList) {
+            const old = oldMap.get(nw.id);
+            if (!old) {
+                toAdd.push(nw);
+            }
+        }
+
+        return { toAdd, toRemove };
+    }
+
+
     const onRead = async (product) => {
         setSelectedProduct(product);
         setModalMode('read');
@@ -124,11 +148,12 @@ export default function ProductCatalogue() {
             console.error(err);
         }
     };
-    const onEdit = async () => {
+    const onEdit = async (product) => {
         if (!CEOAccess) {
             window.alert('Вы не можете менять изделия');
             return;
         }
+        setSelectedProduct(product);
         setModalMode('edit');
         setModalOpen(true);
     }
@@ -186,13 +211,14 @@ export default function ProductCatalogue() {
     };
 
     return (
-        <div>
+        <div className="page">
 
-            <h1>Каталог изделий</h1>
+            <h1 className="page__title">Каталог изделий</h1>
 
             <div>
 
                 <input
+                    className="input--text search"
                     type="text"
                     placeholder="Поиск..."
                     value={searchInput}
@@ -207,6 +233,7 @@ export default function ProductCatalogue() {
                 />
 
                 <button
+                    className="btn--toggle"
                     onClick={() => {
                         setSort(prev =>
                             prev === "profit"
@@ -223,6 +250,7 @@ export default function ProductCatalogue() {
                 </button>
 
                 <select
+                    className="btn--select"
                     value={selectedFactory}
 
                     onChange={(e) =>
@@ -249,6 +277,7 @@ export default function ProductCatalogue() {
                 {
                     CEOAccess &&
                     <button
+                        className="btn"
                         onClick={onCreate}
                     >
                         Добавить изделие
@@ -259,19 +288,20 @@ export default function ProductCatalogue() {
             {
                 products.length !== 0 ?
                     <>
-                        <p>Сумма изделий: {summary}</p>
-                        <table border="1" cellPadding="10">
-                            <thead>
+                        <p className="sumProduct">Сумма изделий: {summary}</p>
+                        <table className="table">
+                            <thead className="table__head">
                                 <tr>
                                     <th>Название</th>
                                     <th>Вес</th>
                                     <th>Цена</th>
                                     <th>Срок годности</th>
                                     <th>{sort === "profit" ? "Прибыль" : "Ингредиенты"}</th>
+                                    {CEOAccess && <th>Действия</th>}
                                 </tr>
                             </thead>
 
-                            <tbody>
+                            <tbody className="table_body">
                                 {
                                     products.map(product => (
                                         <ProductRow
@@ -279,6 +309,9 @@ export default function ProductCatalogue() {
                                             product={product}
                                             onRead={onRead}
                                             sort={sort}
+                                            CEOAccess={CEOAccess}
+                                            onEdit={CEOAccess ? onEdit : () => { }}
+                                            onDelete={CEOAccess ? onDelete : () => { }}
                                         />
                                     ))
                                 }
@@ -287,18 +320,21 @@ export default function ProductCatalogue() {
 
                         </table>
                         {pageInfo.totalPages > 1 &&
-                            <div>
+                            <div className="pagination">
                                 {page > 1 &&
-                                    <button onClick={async () => {
-                                        loadProducts(
-                                            pageInfo.offset - pageInfo.limit
-                                        )
-                                    }}>
+                                    <button
+                                        className="pagination__btn"
+                                        onClick={async () => {
+                                            loadProducts(
+                                                pageInfo.offset - pageInfo.limit
+                                            )
+                                        }}>
                                         {'<'}
                                     </button>
                                 }
                                 <>
                                     <input
+                                        className="pagination__input"
                                         id='pageNum'
                                         type='number'
                                         value={pageInput}
@@ -328,11 +364,13 @@ export default function ProductCatalogue() {
                                 </>
 
                                 {page < pageInfo.totalPages &&
-                                    <button onClick={async () => {
-                                        loadProducts(
-                                            pageInfo.offset + pageInfo.limit
-                                        )
-                                    }}>
+                                    <button
+                                        className="pagination__btn"
+                                        onClick={async () => {
+                                            loadProducts(
+                                                pageInfo.offset + pageInfo.limit
+                                            )
+                                        }}>
                                         {'>'}
                                     </button>
                                 }
@@ -347,7 +385,7 @@ export default function ProductCatalogue() {
                     open={modalOpen}
                     productId={selectedProduct ? selectedProduct.id : null}
                     onRead={switchToRead}
-                    onEdit={onEdit}
+                    onEdit={() => onEdit(selectedProduct)}
                     onDelete={onDelete}
                     onSubmit={onSubmit}
                     onClose={closeModal}
