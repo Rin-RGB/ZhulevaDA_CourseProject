@@ -167,13 +167,13 @@ export default function IngredientsPage() {
                                             <td>{ingredient.expiration_days}</td>
                                             {CEOAccess && <td>
                                                 <button
-                                                    className="btn"
+                                                    className="btn btn--icon"
                                                     onClick={() => onEdit(ingredient)}
                                                 >
                                                     <i className="bi bi-pencil-fill"></i>
                                                 </button>
                                                 <button
-                                                    className="btn btn--danger"
+                                                    className="btn btn--icon btn--danger"
                                                     onClick={() => onDelete(ingredient)} >
                                                     <i className="bi bi-trash3"></i>
                                                 </button>

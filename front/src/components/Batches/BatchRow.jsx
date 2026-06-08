@@ -22,7 +22,7 @@ export default function BatchRow({ mode, batch, onDelete }) {
                 </td>
                 <td>
                     <button
-                        className="btn btn--danger"
+                        className="btn btn--icon btn--danger"
                         onClick={onDelete}>
                         <i className="bi bi-trash3"></i>
                     </button>
