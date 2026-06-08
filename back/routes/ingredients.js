@@ -164,7 +164,7 @@ router.get('/batches', async (req, res) => {
                 bi.factory_id,
                 f.name AS factory_name,
 
-                bi.delivery_kg,
+                ROUND(bi.delivery_kg, 3) AS delivery_kg,
                 bi.delivery_date,
                 bi.expiry_date,
 

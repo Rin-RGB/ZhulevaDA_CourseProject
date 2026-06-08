@@ -107,6 +107,10 @@ export default function WorkerModal({
             [field]: value
         }));
     }
+    const modalHeader = () => {
+        if (modalMode === 'edit') return 'Редактировать сотрудника';
+        return 'Добавить сотрудника'
+    }
 
     return (
         <div className="modal" onClick={onClose}>
@@ -116,11 +120,14 @@ export default function WorkerModal({
                     e.stopPropagation()
                 }
             >
-                <button
-                    className="modal__close"
-                    onClick={onClose}>
-                    ✕
-                </button>
+                <div className="modal__header">
+                    <p className="modal__title">{modalHeader()}</p>
+                    <button
+                        className="modal__close"
+                        onClick={onClose}>
+                        ✕
+                    </button>
+                </div>
                 <FormField
                     label="Почта"
                     name="email"
