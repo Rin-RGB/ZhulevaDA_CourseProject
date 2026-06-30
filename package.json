@@ -1,0 +1,26 @@
+{
+  "name": "code",
+  "version": "1.0.0",
+  "description": "«Хлебоград» — это веб-приложение для автоматизации управления производственными процессами хлебобулочного предприятия.",
+  "main": "newProduct.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "npm install --prefix back && npm install --prefix front",
+    "dev": "concurrently \"cd back && node server.js\" \"cd front && npm run dev\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rin-RGB/ZhulevaDA_CourseProject.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Rin-RGB/ZhulevaDA_CourseProject/issues"
+  },
+  "homepage": "https://github.com/Rin-RGB/ZhulevaDA_CourseProject#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
